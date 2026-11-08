@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GráficaCRM — Sistema de tema (claro e escuro)</title>
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     TOKENS. Duas famílias de variáveis, aplicadas por classe .thm.
+     Assim o mesmo componente pode ser renderizado nos dois temas
+     lado a lado, sem duplicar CSS.
+     ───────────────────────────────────────────────────────────── */
+  .thm.light {
+    --bg: #F3F5FB;
+    --surface: #FFFFFF;
+    --surface-2: #FAFBFE;
+    --border: #E3E8F2;
+    --border-strong: #CBD5E6;
+    --text: #0F1B2D;
+    --text-2: #586A84;
+    --text-3: #8A99B0;
+    --primary: #3D4EF5;
+    --primary-hover: #2C3BE0;
+    --primary-soft: #ECEEFE;
+    --on-primary: #FFFFFF;
+    --mint: #0E9E77;
+    --mint-soft: #E2F7F0;
+    --pink: #D62E7E;
+    --pink-soft: #FCE7F1;
+    --amber: #B4670A;
+    --amber-soft: #FDF0DC;
+    --shadow-card: 0 1px 2px rgba(16,27,45,.05), 0 10px 26px -18px rgba(16,27,45,.35);
+    --shadow-pop: 0 2px 4px rgba(16,27,45,.06), 0 18px 40px -20px rgba(16,27,45,.45);
+    --rail: #3D4EF5;
+    --halftone: rgba(15,27,45,.07);
+  }
+  .thm.dark {
+    --bg: #0A1020;
+    --surface: #131B2E;
+    --surface-2: #18223A;
+    --border: #24314D;
+    --border-strong: #33425F;
+    --text: #EDF2FB;
+    --text-2: #A9B7CE;
+    --text-3: #7B8AA4;
+    --primary: #8393FF;
+    --primary-hover: #9CA9FF;
+    --primary-soft: #1E2A55;
+    --on-primary: #0A1020;
+    --mint: #3ADCAD;
+    --mint-soft: #12352D;
+    --pink: #FF7AAE;
+    --pink-soft: #3B1A2B;
+    --amber: #FFB74A;
+    --amber-soft: #3A2A12;
+    --shadow-card: 0 1px 2px rgba(0,0,0,.35), 0 14px 34px -22px rgba(0,0,0,.9);
+    --shadow-pop: 0 2px 6px rgba(0,0,0,.5), 0 24px 50px -24px rgba(0,0,0,1);
+    --rail: #8393FF;
+    --halftone: rgba(237,242,251,.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .thm {
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    /* Meia-tinta: a marca da gráfica, usada com moderação.
+       Uma malha de pontos no topo, nunca como papel de parede.*/
+    background-image:
+      radial-gradient(var(--halftone) 1px, transparent 1px);
+    background-size: 18px 18px;
+    background-position: 0 0;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 20px 56px;
+  }
+
+  /* ── Cabeçalho ─────────────────────────────────────────────── */
+  .topbar-doc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+  }
+
+  .mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: var(--primary);
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-card);
+  }
+  /* O "G" em chapa de meia-tinta: pontos recortados, não gradiente */
+  .mark::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 11px;
+    background-image: radial-gradient(rgba(255,255,255,.55) 1px, transparent 1.2px);
+    background-size: 3px 3px;
+    opacity: .5;
+  }
+  .mark span {
+    position: relative;
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--on-primary);
+    letter-spacing: -.02em;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 650;
+    letter-spacing: -.015em;
+  }
+  .brand p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+
+  .toggle {
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+    box-shadow: var(--shadow-card);
+  }
+  .toggle button {
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 550;
+    border: 0;
+    background: transparent;
+    color: var(--text-2);
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .toggle button[aria-pressed="true"] {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+  .toggle button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* ── Seções ────────────────────────────────────────────────── */
+  .sec-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 30px 0 14px;
+  }
+  .sec-title h2 {
+    margin: 0;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+  }
+  .sec-title span {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  /* ── Paleta ────────────────────────────────────────────────── */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+    gap: 10px;
+  }
+  .sw {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+  }
+  .sw .chip {
+    height: 46px;
+  }
+  .sw .meta {
+    padding: 8px 10px 9px;
+  }
+  .sw .nome {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text);
+    display: block;
+  }
+  .sw .hex {
+    font-size: 11px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+  }
+
+  /* ── Moldura do aplicativo ─────────────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 196px 1fr;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-pop);
+  }
+
+  .side {
+    background: var(--surface-2);
+    border-right: 1px solid var(--border);
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .side .grp {
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 12px 8px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 9px;
+    border-radius: 9px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: default;
+  }
+  .nav-item .ico {
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1.5px solid currentColor;
+    opacity: .75;
+    flex: none;
+  }
+  .nav-item.on {
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 600;
+  }
+  .nav-item.on .ico { opacity: 1; }
+  .nav-item .count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 650;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: 99px;
+    padding: 1px 7px;
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-item.on .count {
+    background: rgba(255,255,255,.22);
+    color: var(--on-primary);
+  }
+
+  .main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-head h3 {
+    margin: 0;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+    flex: none;
+  }
+  .search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 6px 10px;
+    color: var(--text-3);
+    font-size: 12.5px;
+    min-width: 0;
+    flex: 1 1 auto;
+    max-width: 260px;
+  }
+  .search .lupa {
+    width: 12px; height: 12px;
+    border: 1.6px solid currentColor;
+    border-radius: 50%;
+    flex: none;
+  }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--pink-soft);
+    color: var(--pink);
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex: none;
+    border: 1px solid var(--border);
+  }
+
+  .body-app {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── KPIs ──────────────────────────────────────────────────── */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
+  }
+  .kpi {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 12px 12px;
+    position: relative;
+  }
+  .kpi .rot {
+    font-size: 11.5px;
+    color: var(--text-2);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .kpi .val {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 25px;
+    font-weight: 650;
+    letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .kpi .delta {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 7px;
+    display: block;
+  }
+  .kpi.destaque {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+  .kpi.destaque .rot,
+  .kpi.destaque .delta { color: rgba(255,255,255,.82); }
+  .kpi.destaque .val { color: var(--on-primary); }
+  .thm.dark .kpi.destaque .rot,
+  .thm.dark .kpi.destaque .delta { color: rgba(10,16,32,.72); }
+  .kpi.destaque::after {
+    content: "";
+    position: absolute;
+    right: 10px; top: 10px;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background-image: radial-gradient(rgba(255,255,255,.5) 1px, transparent 1.3px);
+    background-size: 5px 5px;
+    opacity: .8;
+  }
+
+  /* ── Kanban ────────────────────────────────────────────────── */
+  .kanban {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+  .col {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    min-width: 0;
+  }
+  .col-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 9px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .col-head strong {
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: -.005em;
+  }
+  .col-head em {
+    font-style: normal;
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 10px 10px;
+    margin-bottom: 8px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(16,27,45,.04);
+  }
+  .card:last-child { margin-bottom: 0; }
+  .card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 9px; bottom: 9px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--rail);
+  }
+  .card .cliente {
+    font-size: 12.5px;
+    font-weight: 650;
+    letter-spacing: -.005em;
+    display: block;
+    padding-left: 6px;
+  }
+  .card .produto {
+    font-size: 11.5px;
+    color: var(--text-2);
+    display: block;
+    padding-left: 6px;
+    margin-top: 2px;
+  }
+  .card .rodape {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding-left: 6px;
+  }
+  .tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .tag.prazo { background: var(--primary-soft); color: var(--primary); }
+  .tag.late { background: var(--amber-soft); color: var(--amber); }
+  .tag.ok   { background: var(--mint-soft); color: var(--mint); }
+  .tag.novo { background: var(--pink-soft); color: var(--pink); }
+  .card .valor {
+    margin-left: auto;
+    font-size: 11.5px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .mini-avatar {
+    width: 19px; height: 19px;
+    border-radius: 50%;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 9px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+
+  /* ── Linha de conversa / follow-up ─────────────────────────── */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .panel h4 {
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+
+  .conv {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+  }
+  .conv .bolha {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .conv .bolha small {
+    display: block;
+    color: var(--text-3);
+    font-size: 10.5px;
+    margin-top: 4px;
+  }
+
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    position: relative;
+    padding-bottom: 12px;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: "";
+    position: absolute;
+    left: 5.5px; top: 14px;
+    bottom: 0;
+    width: 1.5px;
+    background: var(--border-strong);
+  }
+  .step:last-child::before { display: none; }
+  .step .pt {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--border-strong);
+    background: var(--surface-2);
+    flex: none;
+    margin-top: 1px;
+    z-index: 1;
+  }
+  .step.feito .pt {
+    background: var(--mint);
+    border-color: var(--mint);
+  }
+  .step.agora .pt {
+    background: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .step .txt { font-size: 12px; }
+  .step .txt b { font-weight: 650; display: block; }
+  .step .txt span { color: var(--text-3); font-size: 11px; }
+
+  /* ── Componentes ───────────────────────────────────────────── */
+  .comp {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: var(--shadow-card);
+  }
+  .btn {
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    border-radius: 9px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .btn.primario { background: var(--primary); color: var(--on-primary); }
+  .btn.primario:hover { background: var(--primary-hover); }
+  .btn.secundario {
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  .btn.fantasma { background: transparent; color: var(--primary); }
+  .btn.perigo { background: var(--amber-soft); color: var(--amber); }
+  .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 168px;
+  }
+  .field label { font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+  .field input {
+    font: inherit;
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    color: var(--text);
+    outline: none;
+  }
+  .field input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .field .hint { font-size: 11px; color: var(--text-3); }
+
+  /* ── Comparação lado a lado ────────────────────────────────── */
+  .duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .duo .thm {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    min-height: 0;
+    padding: 14px;
+  }
+  .duo .thm { background-image: none; }
+  .duo h5 {
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    font-weight: 650;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .duo .amostra {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px;
+  }
+  .duo .amostra b {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    display: block;
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: -.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .duo .amostra span {
+    font-size: 11.5px;
+    color: var(--text-2);
+  }
+  .duo .linha {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .duo .pip {
+    height: 9px;
+    flex: 1;
+    border-radius: 99px;
+  }
+
+  .nota {
+    font-size: 12px;
+    color: var(--text-2);
+    max-width: 68ch;
+    margin: 0 0 16px;
+  }
+  .nota b { color: var(--text); }
+
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+    .side {
+      flex-direction: row;
+      overflow-x: auto;
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      gap: 6px;
+    }
+    .side .grp { display: none; }
+    .nav-item { white-space: nowrap; }
+    .nav-item .count { display: none; }
+    .split, .duo { grid-template-columns: 1fr; }
+    .kanban { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body class="thm light" id="raiz">
+
+<div class="wrap">
+
+  <header class="topbar-doc">
+    <div class="brand">
+      <div class="mark" aria-hidden="true"><span>G</span></div>
+      <div>
+        <h1>GráficaCRM</h1>
+        <p>Sistema de tema — versão clara e versão escura</p>
+      </div>
+    </div>
+    <div class="toggle" role="group" aria-label="Tema">
+      <button type="button" data-tema="light" aria-pressed="true">Claro</button>
+      <button type="button" data-tema="dark" aria-pressed="false">Escuro</button>
+    </div>
+  </header>
+
+  <p class="nota">
+    Azul vivo como cor de ação, superfície branca sobre fundo levemente azulado, menta e rosa para os
+    acentos de estado. No escuro o fundo vai para <b>azul-tinta profundo</b> (não preto) e o azul clareia
+    para <b>#8393FF</b> — se o mesmo azul fosse mantido, o contraste do texto sobre ele cairia abaixo do legível.
+  </p>
+
+  <!-- ── Paleta ─────────────────────────────────────────────── -->
+  <div class="sec-title">
+    <h2>Paleta</h2>
+    <span>valores mudam com o tema</span>
+  </div>
+  <div class="swatches" id="paleta"></div>
+
+  <!-- ── Aplicação ──────────────────────────────────────────── -->
+  <div class="sec-title">
+    <h2>Aplicação</h2>
+    <span>produção gráfica — dados de exemplo</span>
+  </div>
+
+  <div class="app">
+    <aside class="side">
+      <div class="grp">Atendimento</div>
+      <div class="nav-item on"><span class="ico"></span>Inbox<span class="count">12</span></div>
+      <div class="nav-item"><span class="ico"></span>Radar</div>
+
+      <div class="grp">Produção</div>
+      <div class="nav-item"><span class="ico"></span>Painel</div>
+      <div class="nav-item"><span class="ico"></span>Quadro</div>
+      <div class="nav-item"><span class="ico"></span>Ordens<span class="count">31</span></div>
+
+      <div class="grp">Comercial</div>
+      <div class="nav-item"><span class="ico"></span>Catálogo</div>
+      <div class="nav-item"><span class="ico"></span>Orçamentos</div>
+      <div class="nav-item"><span class="ico"></span>Follow-ups</div>
+
+      <div class="grp">Análise</div>
+      <div class="nav-item"><span class="ico"></span>Desempenho</div>
+    </aside>
+
+    <div class="main">
+      <div class="app-head">
+        <h3>Produção</h3>
+        <div class="search"><span class="lupa"></span>Buscar pedido, cliente ou arte</div>
+        <div class="avatar">MC</div>
+      </div>
+
+      <div class="body-app">
+
+        <div class="kpis">
+          <div class="kpi destaque">
+            <span class="rot">Em produção</span>
+            <span class="val">18</span>
+            <span class="delta">4 entram hoje</span>
+          </div>
+          <div class="kpi">
+            <span class="rot">Aguardando orçamento</span>
+            <span class="val">7</span>
+            <span class="delta">3 acima de 2 dias</span>
+          </div>
+          <div class="kpi">
+            <span class="rot">Prontos p/ retirada</span>
+            <span class="val">5</span>
+            <span class="delta">cliente avisado</span>
+          </div>
+          <div class="kpi">
+            <span class="rot">Atrasados</span>
+            <span class="val">2</span>
+            <span class="delta">prazo vencido</span>
+          </div>
+        </div>
+
+        <div class="kanban">
+          <div class="col">
+            <div class="col-head">
+              <span class="dot" style="background:var(--pink)"></span>
+              <strong>Fazer orçamento</strong><em>3</em>
+            </div>
+            <div class="card">
+              <span class="cliente">Bistrô Aurora</span>
+              <span class="produto">Cardápio A3 — 4 páginas, couché 300g</span>
+              <div class="rodape">
+                <span class="tag novo">novo</span>
+                <span class="tag prazo">hoje</span>
+                <span class="mini-avatar">AS</span>
+              </div>
+            </div>
+            <div class="card">
+              <span class="cliente">Clínica Vitta</span>
+              <span class="produto">Banner 1,2 × 0,9 m com bastão</span>
+              <div class="rodape">
+                <span class="tag late">2 dias</span>
+                <span class="mini-avatar">JL</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="col-head">
+              <span class="dot" style="background:var(--primary)"></span>
+              <strong>Em produção</strong><em>4</em>
+            </div>
+            <div class="card" style="--rail:var(--amber)">
+              <span class="cliente">Ótica Prime</span>
+              <span class="produto">Adesivo vitrine — recorte eletrônico</span>
+              <div class="rodape">
+                <span class="tag late">atrasado 1d</span>
+                <span class="tag ok">arte ok</span>
+                <span class="valor">R$ 480</span>
+              </div>
+            </div>
+            <div class="card">
+              <span class="cliente">Studio Meia-Lua</span>
+              <span class="produto">Cartões de visita — 1.000 un, laminação fosca</span>
+              <div class="rodape">
+                <span class="tag prazo">qui</span>
+                <span class="mini-avatar">RM</span>
+                <span class="valor">R$ 190</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="col-head">
+              <span class="dot" style="background:var(--mint)"></span>
+              <strong>Pronto p/ retirada</strong><em>5</em>
+            </div>
+            <div class="card" style="--rail:var(--mint)">
+              <span class="cliente">Padaria Trigo Bom</span>
+              <span class="produto">Sacolas personalizadas — 500 un</span>
+              <div class="rodape">
+                <span class="tag ok">avisado</span>
+                <span class="mini-avatar">CT</span>
+                <span class="valor">R$ 1.250</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <h4>Conversa</h4>
+            <div class="conv">
+              <div class="avatar" style="background:var(--primary-soft);color:var(--primary)">BA</div>
+              <div class="bolha">
+                Oi! Vocês fazem cartão de visita com laminação fosca?
+                <small>Bistrô Aurora · há 3 min</small>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+              <span class="tag prazo">Lead</span>
+              <span class="tag">catálogo consultado</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h4>Follow-up do orçamento</h4>
+            <div class="steps">
+              <div class="step feito">
+                <span class="pt"></span>
+                <span class="txt"><b>Orçamento enviado</b><span>04/11 · 15:42</span></span>
+              </div>
+              <div class="step feito">
+                <span class="pt"></span>
+                <span class="txt"><b>1º contato — recebeu?</b><span>05/11 · 15:42 · enviado</span></span>
+              </div>
+              <div class="step agora">
+                <span class="pt"></span>
+                <span class="txt"><b>2º contato — fechar</b><span>09/11 · agendado</span></span>
+              </div>
+              <div class="step">
+                <span class="pt"></span>
+                <span class="txt"><b>3º contato — última tentativa</b><span>04/12 · pendente</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Componentes ────────────────────────────────────────── -->
+  <div class="sec-title">
+    <h2>Componentes</h2>
+    <span>mesmos tokens, ambos os temas</span>
+  </div>
+  <div class="comp">
+    <button class="btn primario" type="button">Orçamento enviado</button>
+    <button class="btn secundario" type="button">Editar ordem</button>
+    <button class="btn fantasma" type="button">Ver histórico</button>
+    <button class="btn perigo" type="button">Marcar atraso</button>
+    <div class="field">
+      <label for="prazo">Prazo de entrega</label>
+      <input id="prazo" type="text" value="14/11/2026" readonly>
+      <span class="hint">usado no indicador de atraso</span>
+    </div>
+  </div>
+
+  <!-- ── Lado a lado ────────────────────────────────────────── -->
+  <div class="sec-title">
+    <h2>Os dois temas juntos</h2>
+    <span>a mesma amostra, sem trocar de tela</span>
+  </div>
+  <div class="duo">
+    <div class="thm light">
+      <h5>Claro</h5>
+      <div class="amostra">
+        <b>18 pedidos</b>
+        <span>em produção hoje</span>
+        <div class="linha">
+          <span class="pip" style="background:var(--primary)"></span>
+          <span class="pip" style="background:var(--mint)"></span>
+          <span class="pip" style="background:var(--pink)"></span>
+          <span class="pip" style="background:var(--amber)"></span>
+        </div>
+      </div>
+    </div>
+    <div class="thm dark">
+      <h5>Escuro</h5>
+      <div class="amostra">
+        <b>18 pedidos</b>
+        <span>em produção hoje</span>
+        <div class="linha">
+          <span class="pip" style="background:var(--primary)"></span>
+          <span class="pip" style="background:var(--mint)"></span>
+          <span class="pip" style="background:var(--pink)"></span>
+          <span class="pip" style="background:var(--amber)"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Troca de tema ────────────────────────────────────────────
+  const raiz = document.getElementById("raiz");
+  const botoes = document.querySelectorAll(".toggle button");
+
+  function aplicar(tema) {
+    raiz.classList.remove("light", "dark");
+    raiz.classList.add(tema);
+    botoes.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tema === tema)));
+    desenharPaleta();
+  }
+
+  botoes.forEach(b => b.addEventListener("click", () => aplicar(b.dataset.tema)));
+
+  // ── Amostras de cor com o valor lido do tema ativo ───────────
+  const TOKENS = [
+    ["Primária", "--primary"],
+    ["Fundo", "--bg"],
+    ["Superfície", "--surface"],
+    ["Borda", "--border"],
+    ["Menta", "--mint"],
+    ["Rosa", "--pink"],
+    ["Âmbar", "--amber"],
+    ["Texto", "--text"],
+  ];
+
+  function desenharPaleta() {
+    const cs = getComputedStyle(raiz);
+    const alvo = document.getElementById("paleta");
+    alvo.innerHTML = TOKENS.map(([nome, varName]) => {
+      const valor = cs.getPropertyValue(varName).trim();
+      return `<div class="sw">
+        <div class="chip" style="background:${valor}"></div>
+        <div class="meta">
+          <span class="nome">${nome}</span>
+          <span class="hex">${valor.toUpperCase()}</span>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  desenharPaleta();
+</script>
+</body>
+</html>
