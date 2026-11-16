@@ -43,6 +43,7 @@ import { logger } from "@/lib/logger";
 import { LlmConteudoBloqueadoError } from "@/lib/agent-engine/edge/llm/conteudo-bloqueado";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
