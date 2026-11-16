@@ -88,15 +88,18 @@ export default async function ProducaoPage() {
     slug: s.slug,
     pipeline_id: s.pipeline_id,
     color: s.color,
+    is_won: s.is_won,
     tipo: classificarEtapa(s),
   }));
 
   // Etapas alvo da produção (produção, retirada, instalação)
-  const etapasAlvo = etapasProducao.filter((e) => e.tipo !== "outro");
+  const etapasAlvo = etapasProducao.filter(
+    (e) => e.tipo === "producao" || e.tipo === "retirada" || e.tipo === "instalacao",
+  );
   const etapasAlvoIds =
     etapasAlvo.length > 0
       ? etapasAlvo.map((e) => e.id)
-      : stages.filter((s) => !s.is_lost).map((s) => s.id);
+      : stages.filter((s) => !s.is_lost && !s.is_won).map((s) => s.id);
 
   // 3. Busca de leads nas etapas operacionais
   const { data: leadsData } = await supabase

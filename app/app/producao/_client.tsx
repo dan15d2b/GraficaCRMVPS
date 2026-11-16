@@ -192,21 +192,47 @@ export function ProducaoClient({
   }, [itens, pipelineIdFiltro, filtroAba, busca, ordenacao]);
 
   // ─── AÇÕES 1-CLICK: MOVER ETAPA ────────────────────────────────────────────
-  async function moverParaEtapa(item: ItemDeProducao, destinoTipo: "retirada" | "instalacao") {
-    // Localiza a etapa correspondente no mesmo funil
-    const etapaDestino = etapas.find(
-      (e) => e.pipeline_id === item.pipeline_id && e.tipo === destinoTipo,
-    );
-
-    if (!etapaDestino) {
-      toast.error(
-        `Nenhuma etapa de ${destinoTipo === "retirada" ? "Retirada" : "Instalação"} encontrada neste funil.`,
-      );
-      return;
-    }
-
+  async function moverParaEtapa(
+    item: ItemDeProducao,
+    destinoTipo: "retirada" | "instalacao" | "concluido",
+  ) {
     setAcaoCarregandoId(item.id);
     try {
+      if (destinoTipo === "concluido") {
+        // Tenta encontrar etapa de concluído/ganho do funil
+        const etapaConcluido = etapas.find(
+          (e) => e.pipeline_id === item.pipeline_id && (e.tipo === "concluido" || e.is_won),
+        );
+
+        if (etapaConcluido) {
+          await apiClient.post(`/api/v1/leads/${item.id}/move`, {
+            stage_id: etapaConcluido.id,
+            position_in_stage: 0,
+            expected_updated_at: item.updated_at,
+          });
+        } else {
+          // Se não houver etapa explícita de concluído, encerra como ganho via endpoint canônico
+          await apiClient.post(`/api/v1/leads/${item.id}/win`, {});
+        }
+
+        // Remove da fila de produção ativa instantaneamente
+        setItens((prev) => prev.filter((i) => i.id !== item.id));
+        toast.success(`Pedido #${item.id.slice(0, 7)} concluído com sucesso!`);
+        return;
+      }
+
+      // Localiza a etapa correspondente no mesmo funil
+      const etapaDestino = etapas.find(
+        (e) => e.pipeline_id === item.pipeline_id && e.tipo === destinoTipo,
+      );
+
+      if (!etapaDestino) {
+        toast.error(
+          `Nenhuma etapa de ${destinoTipo === "retirada" ? "Retirada" : "Instalação"} encontrada neste funil.`,
+        );
+        return;
+      }
+
       await apiClient.post(`/api/v1/leads/${item.id}/move`, {
         stage_id: etapaDestino.id,
         position_in_stage: 0,
@@ -682,22 +708,37 @@ export function ProducaoClient({
             return (
               <div
                 key={item.id}
-                className="group relative flex flex-col justify-between rounded-lg border border-border bg-card p-4 transition-all hover:border-border/80 hover:shadow-xs"
+                className={`group relative flex flex-col justify-between rounded-xl border p-4 transition-all hover:shadow-md ${
+                  ehRetirada
+                    ? "border-emerald-300/80 bg-emerald-50/20 dark:border-emerald-900/60 dark:bg-emerald-950/10 hover:border-emerald-500 shadow-xs"
+                    : ehInstalacao
+                      ? "border-indigo-300/80 bg-indigo-50/20 dark:border-indigo-900/60 dark:bg-indigo-950/10 hover:border-indigo-500 shadow-xs"
+                      : "border-border/90 bg-card hover:border-primary/50 shadow-xs"
+                }`}
               >
                 <div>
                   {/* Cabeçalho do Card */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-muted-foreground">
+                        <span className="text-xs font-mono font-bold text-muted-foreground">
                           #{item.id.slice(0, 7)}
                         </span>
-                        <Badge variant="outline" className="text-[10px] font-medium py-0">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs font-semibold py-0.5 px-2 ${
+                            ehRetirada
+                              ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                              : ehInstalacao
+                                ? "border-indigo-300 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300"
+                                : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                          }`}
+                        >
                           {item.stage_name}
                         </Badge>
                       </div>
                       <h3
-                        className="mt-1 text-sm font-semibold tracking-tight text-foreground line-clamp-1"
+                        className="mt-1.5 text-base font-bold tracking-tight text-foreground line-clamp-1"
                         title={item.title}
                       >
                         {item.title}
@@ -708,17 +749,19 @@ export function ProducaoClient({
                   </div>
 
                   {/* Informações do Cliente */}
-                  <div className="mt-2.5 flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
                     <div className="truncate">
-                      <span className="font-medium text-foreground">
+                      <span className="font-semibold text-foreground">
                         {item.contact_name || "Cliente sem contato"}
                       </span>
                       {item.contact_phone && (
-                        <span className="ml-1.5 font-mono text-[11px]">({item.contact_phone})</span>
+                        <span className="ml-1.5 font-mono text-xs text-foreground/70">
+                          ({item.contact_phone})
+                        </span>
                       )}
                     </div>
                     {item.value_cents ? (
-                      <span className="font-mono font-semibold text-foreground">
+                      <span className="font-mono font-bold text-sm text-foreground">
                         {formatCentsBRL(item.value_cents)}
                       </span>
                     ) : null}
@@ -726,22 +769,22 @@ export function ProducaoClient({
 
                   {/* Dossiê Técnico Rápido (Material, Dimensões, Acabamento) */}
                   {(material || dimensoes || acabamento) && (
-                    <div className="mt-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                    <div className="mt-3 rounded-lg bg-muted/60 border border-border/60 p-2.5 text-xs text-foreground/90 space-y-1">
                       {material && (
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-medium text-foreground">Material:</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-semibold text-foreground">Material:</span>
                           <span className="truncate">{material}</span>
                         </div>
                       )}
                       {dimensoes && (
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-medium text-foreground">Dimensões:</span>
-                          <span className="font-mono">{dimensoes}</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-semibold text-foreground">Dimensões:</span>
+                          <span className="font-mono font-medium">{dimensoes}</span>
                         </div>
                       )}
                       {acabamento && (
-                        <div className="flex items-baseline gap-1">
-                          <span className="font-medium text-foreground">Acabamento:</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-semibold text-foreground">Acabamento:</span>
                           <span className="truncate">{acabamento}</span>
                         </div>
                       )}
@@ -750,13 +793,13 @@ export function ProducaoClient({
 
                   {/* Tags */}
                   {item.tags.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap gap-1">
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                       {item.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground/80 border border-border/50"
                         >
-                          <Tag size={10} />
+                          <Tag size={11} />
                           {tag}
                         </span>
                       ))}
@@ -765,10 +808,10 @@ export function ProducaoClient({
                 </div>
 
                 {/* ─── AÇÕES RÁPIDAS NO CHÃO DE FÁBRICA (1-CLICK) ───────────── */}
-                <div className="mt-4 border-t border-border/60 pt-3">
+                <div className="mt-4 border-t border-border/70 pt-3">
                   {/* Se estiver editando prazo inline */}
                   {editandoPrazoId === item.id ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <Input
                         type="date"
                         value={novaDataPrazo}
@@ -780,22 +823,22 @@ export function ProducaoClient({
                         variant="primary"
                         disabled={acaoCarregandoId === item.id}
                         onClick={() => salvarNovoPrazo(item)}
-                        className="h-8 px-2.5 text-xs"
+                        className="h-8 px-3 text-xs font-semibold cursor-pointer"
                       >
-                        <Check size={14} />
+                        <Check size={14} weight="bold" />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => setEditandoPrazoId(null)}
-                        className="h-8 px-2 text-xs"
+                        className="h-8 px-2.5 text-xs cursor-pointer"
                       >
                         <X size={14} />
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col gap-2.5">
+                      <div className="flex items-center gap-2">
                         {/* 1-Click: Mover para Pronto para Retirada */}
                         {ehEmProducao && (
                           <Button
@@ -803,9 +846,9 @@ export function ProducaoClient({
                             variant="primary"
                             disabled={acaoCarregandoId === item.id}
                             onClick={() => moverParaEtapa(item, "retirada")}
-                            className="h-7 flex-1 gap-1 text-[11px] font-semibold"
+                            className="h-8 flex-1 gap-1 text-xs font-semibold cursor-pointer"
                           >
-                            <CalendarCheck size={13} weight="bold" />
+                            <CalendarCheck size={14} weight="bold" />
                             Pronto p/ Retirada
                           </Button>
                         )}
@@ -817,50 +860,92 @@ export function ProducaoClient({
                             variant="secondary"
                             disabled={acaoCarregandoId === item.id}
                             onClick={() => moverParaEtapa(item, "instalacao")}
-                            className="h-7 flex-1 gap-1 text-[11px] font-semibold"
+                            className="h-8 flex-1 gap-1 text-xs font-semibold cursor-pointer"
                           >
-                            <CalendarBlank size={13} weight="bold" />
+                            <CalendarBlank size={14} weight="bold" />
                             Pronto p/ Instalação
                           </Button>
                         )}
 
-                        {/* Se já estiver em retirada, opção de voltar ou finalizar */}
+                        {/* 1-Click: Concluir direto de Em Produção */}
+                        {ehEmProducao && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={acaoCarregandoId === item.id}
+                            onClick={() => moverParaEtapa(item, "concluido")}
+                            className="h-8 gap-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 cursor-pointer"
+                            title="Concluir pedido"
+                          >
+                            <Check size={14} weight="bold" />
+                            Concluir
+                          </Button>
+                        )}
+
+                        {/* Se já estiver em retirada, status + Botão Concluído */}
                         {ehRetirada && (
-                          <div className="flex-1 text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                            ✓ Aguardando cliente no balcão
+                          <div className="flex flex-1 items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                              ✓ Aguardando cliente no balcão
+                            </span>
+                            <Button
+                              size="sm"
+                              disabled={acaoCarregandoId === item.id}
+                              onClick={() => moverParaEtapa(item, "concluido")}
+                              className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 shadow-xs cursor-pointer"
+                            >
+                              <Check size={15} weight="bold" />
+                              Concluído
+                            </Button>
                           </div>
                         )}
 
-                        {/* Se já estiver em instalação */}
+                        {/* Se já estiver em instalação, status + Botão Concluído */}
                         {ehInstalacao && (
-                          <div className="flex-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
-                            ✓ Pronto para rota de instalação
+                          <div className="flex flex-1 items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 flex items-center gap-1">
+                              ✓ Pronto para rota de instalação
+                            </span>
+                            <Button
+                              size="sm"
+                              disabled={acaoCarregandoId === item.id}
+                              onClick={() => moverParaEtapa(item, "concluido")}
+                              className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 shadow-xs cursor-pointer"
+                            >
+                              <Check size={15} weight="bold" />
+                              Concluído
+                            </Button>
                           </div>
                         )}
                       </div>
 
                       {/* Botões secundários: WhatsApp, Ajustar Prazo, Dossiê */}
                       <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           {whatsappUrl && (
                             <a
                               href={whatsappUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                              className="inline-flex items-center gap-1 font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
                               title="Abrir conversa no WhatsApp"
                             >
                               <WhatsappLogo size={14} weight="fill" />
-                              <span className="text-[11px]">WhatsApp</span>
+                              <span className="text-xs">WhatsApp</span>
                             </a>
                           )}
 
                           <button
+                            type="button"
                             onClick={() => {
                               setEditandoPrazoId(item.id);
-                              setNovaDataPrazo(item.expected_close_date || "");
+                              setNovaDataPrazo(
+                                item.expected_close_date
+                                  ? item.expected_close_date.split("T")[0]!
+                                  : "",
+                              );
                             }}
-                            className="inline-flex items-center gap-1 text-[11px] hover:text-foreground"
+                            className="inline-flex items-center gap-1 text-xs font-medium hover:text-foreground transition-colors cursor-pointer"
                             title="Ajustar prazo de entrega"
                           >
                             <Clock size={13} />
@@ -870,8 +955,9 @@ export function ProducaoClient({
 
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => setItemDossie(item)}
-                            className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer"
                           >
                             <Eye size={13} />
                             Dossiê
@@ -879,7 +965,7 @@ export function ProducaoClient({
 
                           <Link
                             href={`/app/pipelines/${item.pipeline_id}?lead=${item.id}`}
-                            className="inline-flex items-center text-[11px] text-muted-foreground hover:text-foreground"
+                            className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                             title="Ver negócio no quadro Kanban"
                           >
                             <ArrowSquareOut size={13} />

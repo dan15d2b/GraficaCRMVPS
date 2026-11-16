@@ -56,6 +56,12 @@ describe("classificarEtapa", () => {
     expect(classificarEtapa({ name: "Entrega Externa" })).toBe("instalacao");
   });
 
+  it("classifica etapa de concluído por nome ou flag is_won", () => {
+    expect(classificarEtapa({ name: "Concluído", is_won: true })).toBe("concluido");
+    expect(classificarEtapa({ name: "Entregue e Finalizado" })).toBe("concluido");
+    expect(classificarEtapa({ name: "Pedido Concluído" })).toBe("concluido");
+  });
+
   it("classifica outras etapas como outro", () => {
     expect(classificarEtapa({ name: "Lead" })).toBe("outro");
     expect(classificarEtapa({ name: "Briefing" })).toBe("outro");

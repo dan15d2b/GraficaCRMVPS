@@ -7,9 +7,21 @@ export function classificarEtapa(stage: {
   name: string;
   slug?: string | null;
   is_won?: boolean;
-}): "producao" | "retirada" | "instalacao" | "outro" {
+}): "producao" | "retirada" | "instalacao" | "concluido" | "outro" {
   const nome = (stage.name || "").toLowerCase();
   const slug = (stage.slug || "").toLowerCase();
+
+  if (
+    stage.is_won ||
+    nome.includes("conclu") ||
+    slug.includes("conclu") ||
+    nome.includes("finaliz") ||
+    slug.includes("finaliz") ||
+    nome.includes("entregue") ||
+    slug.includes("entregue")
+  ) {
+    return "concluido";
+  }
 
   if (nome.includes("retirada") || slug.includes("retirada")) {
     return "retirada";
@@ -25,8 +37,7 @@ export function classificarEtapa(stage: {
   if (
     nome.includes("produç") ||
     nome.includes("producao") ||
-    slug.includes("producao") ||
-    stage.is_won
+    slug.includes("producao")
   ) {
     return "producao";
   }

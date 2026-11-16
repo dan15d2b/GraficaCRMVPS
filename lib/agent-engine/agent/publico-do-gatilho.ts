@@ -263,7 +263,17 @@ export async function carregarFatosDoContato(
   contactId: string,
 ): Promise<FatosDoContato> {
   const { rows } = await db.query<{ tags: string[] | null; source: string | null; funis: string[] | null }>(
-    `select c.tags,
+    `select (
+              select array_agg(distinct tag)
+                from (
+                  select unnest(c.tags) as tag
+                  union
+                  select unnest(conv.tags) as tag
+                    from conversations conv
+                   where conv.organization_id = $1
+                     and conv.contact_id = $2
+                ) s
+            ) as tags,
             c.source,
             (select array_agg(distinct l.pipeline_id::text)
                from crm_leads l

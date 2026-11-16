@@ -10,7 +10,7 @@ export interface ItemDeProducao {
   stage_id: string;
   stage_name: string;
   stage_color: string | null;
-  stage_tipo: "producao" | "retirada" | "instalacao" | "outro";
+  stage_tipo: "producao" | "retirada" | "instalacao" | "concluido" | "outro";
   contact_id: string | null;
   contact_name: string | null;
   contact_phone: string | null;
@@ -34,8 +34,9 @@ export interface EtapaProducaoRef {
   name: string;
   slug: string;
   pipeline_id: string;
-  tipo: "producao" | "retirada" | "instalacao" | "outro";
+  tipo: "producao" | "retirada" | "instalacao" | "concluido" | "outro";
   color: string | null;
+  is_won?: boolean;
 }
 
 export interface MetricasProducao {

@@ -15,6 +15,8 @@ import {
 import { useT } from "@/hooks/i18n/useT";
 import { ORIGEM_AGENDA_DO_CELULAR } from "@/lib/leads/origem-do-contato";
 import { FUSO_PADRAO } from "@/lib/tempo/fusos";
+import { apiClient } from "@/lib/api/client";
+import { X } from "@/lib/ui/icons";
 
 export interface BusinessHoursValue {
   timezone: string;
@@ -94,33 +96,135 @@ function CampoDeEtiquetas({
   onChange,
   placeholder,
   disabled,
+  variante = "padrao",
 }: {
   id: string;
   valor: readonly string[];
   onChange: (lista: string[]) => void;
   placeholder: string;
   disabled?: boolean;
+  variante?: "padrao" | "exclusao" | "inclusao";
 }) {
+  const t = useT();
   const [texto, setTexto] = React.useState(() => valor.join(", "));
-  // O pai pode trocar a lista por fora (o "Descartar alterações" volta ao
-  // salvo): se o texto já não descreve `valor`, a tela mostra `valor`, senão
-  // ela exibiria o digitado enquanto o salvar grava outra coisa.
+  const [vocabulario, setVocabulario] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    let montado = true;
+    apiClient
+      .get<{ data: string[] } | string[]>("/api/v1/conversation-tags")
+      .then((res) => {
+        if (!montado) return;
+        const tags = Array.isArray(res)
+          ? res
+          : Array.isArray((res as { data?: string[] })?.data)
+            ? (res as { data: string[] }).data
+            : [];
+        setVocabulario(tags);
+      })
+      .catch(() => {
+        // Silencioso se rota indisponível ou teste unitário
+      });
+    return () => {
+      montado = false;
+    };
+  }, []);
+
   const exibido =
     JSON.stringify(listaDeEtiquetas(texto)) === JSON.stringify(valor)
       ? texto
       : valor.join(", ");
+
+  const adicionarTag = (tag: string) => {
+    const limpa = tag.trim();
+    if (!limpa) return;
+    const tagsAtuais = listaDeEtiquetas(exibido);
+    if (!tagsAtuais.some((t) => t.toLowerCase() === limpa.toLowerCase())) {
+      const proximoTexto = exibido.trim() ? `${exibido.trim()}, ${limpa}` : limpa;
+      setTexto(proximoTexto);
+      onChange(listaDeEtiquetas(proximoTexto));
+    }
+  };
+
+  const removerTag = (tagParaRemover: string) => {
+    const tagsAtuais = listaDeEtiquetas(exibido);
+    const filtradas = tagsAtuais.filter((t) => t.toLowerCase() !== tagParaRemover.toLowerCase());
+    const proximoTexto = filtradas.join(", ");
+    setTexto(proximoTexto);
+    onChange(filtradas);
+  };
+
+  const tagsSelecionadas = valor.length > 0 ? valor : listaDeEtiquetas(exibido);
+  const sugestoes = vocabulario.filter(
+    (item) => !tagsSelecionadas.some((v) => v.toLowerCase() === item.toLowerCase()),
+  );
+
   return (
-    <Input
-      id={id}
-      value={exibido}
-      onChange={(e) => {
-        setTexto(e.target.value);
-        onChange(listaDeEtiquetas(e.target.value));
-      }}
-      placeholder={placeholder}
-      disabled={disabled}
-      spellCheck={false}
-    />
+    <div className="space-y-2">
+      {/* Badges das tags já selecionadas */}
+      {tagsSelecionadas.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
+          {tagsSelecionadas.map((tag) => (
+            <span
+              key={tag}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold shadow-xs ${
+                variante === "exclusao"
+                  ? "border border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/60 dark:text-rose-200"
+                  : "border border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200"
+              }`}
+            >
+              <span>{tag}</span>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removerTag(tag)}
+                  className="rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                  aria-label={`Remover ${tag}`}
+                >
+                  <X size={12} weight="bold" />
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Input de digitação (mantém compatibilidade total) */}
+      <Input
+        id={id}
+        value={exibido}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          onChange(listaDeEtiquetas(e.target.value));
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="text-sm bg-background font-medium"
+        spellCheck={false}
+      />
+
+      {/* Sugestões de clique rápido com as tags do WhatsApp e CRM */}
+      {sugestoes.length > 0 && (
+        <div className="space-y-1 pt-0.5">
+          <p className="text-xs font-medium text-muted-foreground">
+            {t("Clique rápido para adicionar tags existentes:")}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {sugestoes.slice(0, 16).map((sugestao) => (
+              <button
+                key={sugestao}
+                type="button"
+                onClick={() => adicionarTag(sugestao)}
+                disabled={disabled}
+                className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80 hover:border-primary/50 hover:bg-primary/10 hover:text-foreground transition-all cursor-pointer"
+              >
+                <span>+ {sugestao}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -149,19 +253,23 @@ function ListaDeFunis({
   if (!funis || funis.length === 0) return null;
   const marcados = new Set(selecionados);
   return (
-    <div className="space-y-1" id={id}>
-      <Label>{rotulo}</Label>
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-1.5 pt-1" id={id}>
+      <Label className="text-sm font-medium text-foreground">{rotulo}</Label>
+      <div className="flex flex-wrap gap-2 pt-0.5">
         {funis.map((f) => {
           const marcado = marcados.has(f.id);
           return (
             <label
               key={f.id}
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs"
+              className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                marcado
+                  ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
+                  : "border-border/80 bg-background text-foreground/80 hover:bg-muted/50"
+              }`}
             >
               <input
                 type="checkbox"
-                className="h-3.5 w-3.5 accent-primary"
+                className="h-4 w-4 rounded accent-primary"
                 checked={marcado}
                 disabled={disabled}
                 aria-label={f.name}
@@ -251,20 +359,24 @@ function ListaDeOrigens({
   const extras = selecionados.filter((o) => !conhecidas.includes(o.toLowerCase()));
   const opcoes = [...conhecidas, ...extras];
   return (
-    <div className="space-y-1" id={id}>
-      <Label>{rotulo}</Label>
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-1.5 pt-1" id={id}>
+      <Label className="text-sm font-medium text-foreground">{rotulo}</Label>
+      <div className="flex flex-wrap gap-2 pt-0.5">
         {opcoes.map((origem) => {
           const marcado = marcados.has(origem.toLowerCase());
           const nome = rotuloDaOrigem(origem, t);
           return (
             <label
               key={origem}
-              className="flex cursor-pointer items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs"
+              className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                marcado
+                  ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
+                  : "border-border/80 bg-background text-foreground/80 hover:bg-muted/50"
+              }`}
             >
               <input
                 type="checkbox"
-                className="h-3.5 w-3.5 accent-primary"
+                className="h-4 w-4 rounded accent-primary"
                 checked={marcado}
                 disabled={disabled}
                 aria-label={nome}
@@ -412,74 +524,109 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
           olha o CONTATO (etiquetas e funis dos negócios abertos), não o texto
           da mensagem — é o que permite um agente de vendas e um de clientes
           dividirem o número. */}
-      <div className="space-y-3 rounded-md border border-border/60 p-3">
+      <div className="space-y-4 rounded-lg border border-border/80 p-4 shadow-xs">
         <div>
-          <Label>{t("Público do agente")}</Label>
-          <p className="text-xs text-muted-foreground">
+          <Label className="text-base font-semibold">{t("Público do agente")}</Label>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {t(
-              "Em branco, ele atende todo mundo. Preenchido, ele só atende quem cumpre TODOS os critérios — e quem tem um item de \"não atender\" fica de fora mesmo que cumpra os de \"atender\".",
+              "Em branco, ele atende todo mundo. Preenchido, ele só atende quem cumpre os critérios e não possui nenhuma regra de bloqueio.",
             )}
           </p>
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="include_tags">{t("Atender só quem tem estas etiquetas")}</Label>
-          <CampoDeEtiquetas
-            id="include_tags"
-            valor={value.filters.include_tags ?? []}
-            onChange={(lista) => patchFilters({ include_tags: lista })}
-            placeholder={t("Ex.: cliente ativo, contrato")}
+        {/* ─── REGRAS DE BLOQUEIO (NÃO ATENDER) ─── */}
+        <div className="space-y-3.5 rounded-md border border-rose-200/90 bg-rose-50/40 p-4 dark:border-rose-900/60 dark:bg-rose-950/20">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-rose-500" />
+            <h4 className="text-sm font-semibold text-rose-950 dark:text-rose-200">
+              {t("Regras de Bloqueio (Não atender)")}
+            </h4>
+            <span className="text-xs text-rose-700/80 dark:text-rose-400">
+              {t("— quem tiver qualquer um destes itens NÃO será respondido pelo agente")}
+            </span>
+          </div>
+
+          <div className="space-y-1.5 pt-1">
+            <Label htmlFor="exclude_tags" className="text-sm font-medium text-foreground">
+              {t("Não atender quem tem estas etiquetas")}
+            </Label>
+            <CampoDeEtiquetas
+              id="exclude_tags"
+              valor={value.filters.exclude_tags ?? []}
+              onChange={(lista) => patchFilters({ exclude_tags: lista })}
+              placeholder={t("Ex.: fornecedor, instalador")}
+              disabled={disabled}
+              variante="exclusao"
+            />
+          </div>
+
+          <ListaDeFunis
+            id="exclude_pipeline_ids"
+            rotulo={t("Não atender quem está nestes funis")}
+            ajuda={t("Estar no funil é ter um negócio ABERTO nele. Quem ainda não tem card NÃO é barrado por esta lista.")}
+            funis={funis}
+            selecionados={value.filters.exclude_pipeline_ids ?? []}
+            onChange={(ids) => patchFilters({ exclude_pipeline_ids: ids })}
+            disabled={disabled}
+          />
+
+          <ListaDeOrigens
+            id="exclude_sources"
+            rotulo={t("Não atender quem chegou por estas origens")}
+            ajuda={t("Ex.: marque Prospecção para que as respostas de uma campanha fiquem com o agente que fez a abordagem.")}
+            selecionados={value.filters.exclude_sources ?? []}
+            onChange={(origens) => patchFilters({ exclude_sources: origens })}
             disabled={disabled}
           />
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="exclude_tags">{t("Não atender quem tem estas etiquetas")}</Label>
-          <CampoDeEtiquetas
-            id="exclude_tags"
-            valor={value.filters.exclude_tags ?? []}
-            onChange={(lista) => patchFilters({ exclude_tags: lista })}
-            placeholder={t("Ex.: cliente ativo, contrato")}
+
+        {/* ─── REGRAS DE ATENDIMENTO (ATENDER SÓ QUEM) ─── */}
+        <div className="space-y-3.5 rounded-md border border-sky-200/90 bg-sky-50/40 p-4 dark:border-sky-900/60 dark:bg-sky-950/20">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500" />
+            <h4 className="text-sm font-semibold text-sky-950 dark:text-sky-200">
+              {t("Regras de Atendimento (Atender só quem)")}
+            </h4>
+            <span className="text-xs text-sky-700/80 dark:text-sky-400">
+              {t("— deixe em branco para qualquer um poder ser atendido")}
+            </span>
+          </div>
+
+          <div className="space-y-1.5 pt-1">
+            <Label htmlFor="include_tags" className="text-sm font-medium text-foreground">
+              {t("Atender só quem tem estas etiquetas")}
+            </Label>
+            <CampoDeEtiquetas
+              id="include_tags"
+              valor={value.filters.include_tags ?? []}
+              onChange={(lista) => patchFilters({ include_tags: lista })}
+              placeholder={t("Ex.: cliente ativo, contrato")}
+              disabled={disabled}
+              variante="inclusao"
+            />
+          </div>
+
+          <ListaDeFunis
+            id="include_pipeline_ids"
+            rotulo={t("Atender só quem está nestes funis")}
+            ajuda={t("Estar no funil é ter um negócio ABERTO nele. Quem ainda não tem card não entra em \"só estes funis\".")}
+            funis={funis}
+            selecionados={value.filters.include_pipeline_ids ?? []}
+            onChange={(ids) => patchFilters({ include_pipeline_ids: ids })}
+            disabled={disabled}
+          />
+
+          <ListaDeOrigens
+            id="include_sources"
+            rotulo={t("Atender só quem chegou por estas origens")}
+            ajuda={t("A origem é por onde o contato entrou no CRM. Em branco, qualquer origem serve.")}
+            selecionados={value.filters.include_sources ?? []}
+            onChange={(origens) => patchFilters({ include_sources: origens })}
             disabled={disabled}
           />
         </div>
 
-        <ListaDeFunis
-          id="include_pipeline_ids"
-          rotulo={t("Atender só quem está nestes funis")}
-          ajuda={t("Estar no funil é ter um negócio ABERTO nele. Quem ainda não tem card não entra em \"só estes funis\".")}
-          funis={funis}
-          selecionados={value.filters.include_pipeline_ids ?? []}
-          onChange={(ids) => patchFilters({ include_pipeline_ids: ids })}
-          disabled={disabled}
-        />
-        <ListaDeFunis
-          id="exclude_pipeline_ids"
-          rotulo={t("Não atender quem está nestes funis")}
-          ajuda={t("Estar no funil é ter um negócio ABERTO nele. Quem ainda não tem card NÃO é barrado por esta lista.")}
-          funis={funis}
-          selecionados={value.filters.exclude_pipeline_ids ?? []}
-          onChange={(ids) => patchFilters({ exclude_pipeline_ids: ids })}
-          disabled={disabled}
-        />
-
-        <ListaDeOrigens
-          id="include_sources"
-          rotulo={t("Atender só quem chegou por estas origens")}
-          ajuda={t("A origem é por onde o contato entrou no CRM. Em branco, qualquer origem serve.")}
-          selecionados={value.filters.include_sources ?? []}
-          onChange={(origens) => patchFilters({ include_sources: origens })}
-          disabled={disabled}
-        />
-        <ListaDeOrigens
-          id="exclude_sources"
-          rotulo={t("Não atender quem chegou por estas origens")}
-          ajuda={t("Ex.: marque Prospecção para que as respostas de uma campanha fiquem com o agente que fez a abordagem.")}
-          selecionados={value.filters.exclude_sources ?? []}
-          onChange={(origens) => patchFilters({ exclude_sources: origens })}
-          disabled={disabled}
-        />
-
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground pt-1">
           {t(
             "Com dois agentes neste número, atende o primeiro na ordem de prioridade que aceita o contato. Se nenhum aceitar, o sistema não responde: a mensagem fica na caixa de entrada para uma pessoa.",
           )}
