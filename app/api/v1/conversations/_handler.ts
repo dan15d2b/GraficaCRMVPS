@@ -21,6 +21,7 @@ import { normalizarTermoDeBusca, termoSemAcento } from "@/lib/inbox/termo-de-bus
 import { ORDEM_DA_ESPERA, ehAFila } from "@/lib/inbox/comando-da-conversa";
 import { aplicarMarcadores } from "@/lib/inbox/marcador-da-conversa";
 import { exigirControleDaConversa } from "@/lib/inbox/controle-da-conversa";
+import { sincronizarEtiquetasDaConversaComCanal } from "@/lib/channels/sync-conversa-etiquetas";
 
 /**
  * Prepara o termo digitado para viajar dentro de um `or=` do PostgREST.
@@ -703,6 +704,12 @@ export async function patchConversationHandler(
     });
   }
   if (input.tags !== undefined) {
+    void sincronizarEtiquetasDaConversaComCanal(
+      supabase as unknown as SupabaseClient,
+      conv.id,
+      conv.organization_id,
+      input.tags,
+    );
     await audit({
       action: "conversation.tags_changed",
       actorUserId: a.actorUserId,
