@@ -50,7 +50,7 @@ export interface PropostaDeFunil {
  * ainda conta uma história (entrou → conversou → fechou/perdeu).
  */
 export const MIN_ETAPAS = 4;
-export const MAX_ETAPAS = 8;
+export const MAX_ETAPAS = 9;
 
 function ehPasso(v: unknown): v is LeadStage {
   return typeof v === "string" && (LEAD_STAGES as readonly string[]).includes(v);

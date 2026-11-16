@@ -7,6 +7,51 @@ import type { NextConfig } from "next";
  *  - INP < 200ms p75
  *  - Initial bundle /app/inbox < 250KB gzipped
  */
+/**
+ * A origem EXATA do Supabase, para a `connect-src` da CSP (M1).
+ *
+ * Os curingas `https://*.supabase.co` cobrem o Supabase Cloud, mas não o
+ * self-host: aqui o Supabase pode ser `https://supabase.minhagrafica.com.br`,
+ * e a CSP bloquearia Realtime e Storage — o operador veria inbox vazio sem
+ * nenhum erro óbvio. Como o build JÁ recebe `NEXT_PUBLIC_SUPABASE_URL` como
+ * `ARG` (Dockerfile:25), a origem sai daí e não de uma lista fixa.
+ *
+ * Devolve a origem em `https://` e em `wss://` (Realtime é WebSocket). Em
+ * `http://` local, o par é `ws://`. Valor ausente ou inválido devolve `[]`:
+ * o curinga continua sendo a defesa, nunca um `throw` — este arquivo roda no
+ * `next build` e um throw aqui é build quebrado em toda instalação.
+ */
+function origensDoSupabase(): string[] {
+  const bruto = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!bruto) return [];
+  let url: URL;
+  try {
+    url = new URL(bruto);
+  } catch {
+    return [];
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return [];
+  const ws = url.protocol === "https:" ? "wss:" : "ws:";
+  return [`${url.protocol}//${url.host}`, `${ws}//${url.host}`];
+}
+
+/**
+ * Origens do Supabase Cloud (curinga) + a origem exata desta instalação.
+ *
+ * Calculado DENTRO de `headers()` e não no load do módulo: assim o teste unitário
+ * consegue injetar `NEXT_PUBLIC_SUPABASE_URL` e provar que a origem exata entra
+ * na CSP — que é o que impede o Realtime do self-host de ser bloqueado.
+ */
+function origensSupabase(): string {
+  return [
+    "https://*.supabase.co",
+    "wss://*.supabase.co",
+    "https://*.supabase.in",
+    "wss://*.supabase.in",
+    ...origensDoSupabase(),
+  ].join(" ");
+}
+
 const nextConfig: NextConfig = {
   // Self-host: gera .next/standalone pro container Docker (node server.js) — é
   // o que o estágio `runner` do Dockerfile copia, então é o modo de build deste
@@ -112,6 +157,37 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(self), geolocation=(), notifications=(self)",
+          },
+          // CSP — M1 (GraficaCRM). Em Report-Only por 3–5 dias antes do enforce.
+          //
+          // script-src 'unsafe-inline': Next.js App Router injeta scripts de
+          // hidratação inline. Sem nonce (acoplaria proxy.ts) e sem hash estático
+          // (o conteúdo muda a cada build), 'unsafe-inline' é obrigatório nesta fase.
+          // Retirar depois do enforce, com nonce ou strict-dynamic.
+          //
+          // connect-src wss://*.supabase.co|.in: Supabase Realtime usa WebSocket.
+          // media-src blob: https://*.supabase.co|.in: gravação PTT (blob URL) e
+          // download de mídia do bucket de WhatsApp.
+          // img-src data: blob:: previews de upload e avatares em base64.
+          // font-src data:: algumas fontes self-hosted chegam como data URI.
+          //
+          // ponytail: nonce por requisição (proxy.ts), strict-dynamic, report-uri
+          // real (hoje sem endpoint). Adicionar quando enforce for estável.
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              `img-src 'self' data: blob: ${origensSupabase()}`,
+              `connect-src 'self' ${origensSupabase()}`,
+              "font-src 'self' data:",
+              `media-src 'self' blob: ${origensSupabase()}`,
+              "object-src 'none'",
+              "base-uri 'self'",
+              "frame-ancestors 'none'",
+              "form-action 'self'",
+            ].join("; "),
           },
         ],
       },

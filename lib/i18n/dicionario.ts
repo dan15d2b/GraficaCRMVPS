@@ -15556,6 +15556,13 @@ export const DICIONARIO: Traducoes = {
   // `lib/followup/modelos/modelos.test.ts`.
   Exame: { es: "Examen" },
   Cirurgia: { es: "Cirugía" },
+  Retirada: { es: "Retiro" },
+  "O orçamento em PDF foi enviado e o cliente não respondeu. Acompanha por 12 dias com 4 toques profissionais.": {
+    es: "Se envió el presupuesto en PDF y el cliente no respondió. Da seguimiento durante 12 días con 4 toques profesionales.",
+  },
+  "Avisa o cliente no WhatsApp que o material gráfico está finalizado e pronto no balcão de retirada.": {
+    es: "Avisa al cliente por WhatsApp que el material gráfico está finalizado y listo en el mostrador de retiro.",
+  },
   "O paciente perguntou sobre consulta, a conversa parou antes de marcar e ninguém voltou nela.": {
     es: "El paciente preguntó por una consulta, la conversación se detuvo antes de agendar la cita y nadie la retomó.",
   },

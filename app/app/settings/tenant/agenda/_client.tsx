@@ -30,6 +30,7 @@ import {
   type UnidadeDeAntecedencia,
 } from "@/lib/agenda/lembretes";
 import { apiClient } from "@/lib/api/client";
+import { MODELOS_DE_AGENDAMENTO_GRAFICA } from "@/lib/agenda/modelos/grafica";
 
 export interface TipoRow {
   service_enabled?: boolean;
@@ -516,6 +517,52 @@ export function TiposDeAgendamentoClient({
     }
   }
 
+  async function importarModelosGrafica() {
+    setSalvando(true);
+    try {
+      let importados = 0;
+      for (const modelo of MODELOS_DE_AGENDAMENTO_GRAFICA) {
+        const jaExiste = tiposIniciais.some(
+          (t) => t.slug === modelo.slug || t.name.toLowerCase() === modelo.name.toLowerCase(),
+        );
+        if (jaExiste) continue;
+
+        await apiClient.post("/api/v1/agenda/tipos", {
+          name: modelo.name,
+          category: modelo.category,
+          duration_minutes: modelo.duration_minutes,
+          location_kind: modelo.location_kind,
+          description: modelo.description,
+          requires_confirmation: modelo.requires_confirmation,
+          buffer_before_minutes: modelo.buffer_before_minutes,
+          buffer_after_minutes: modelo.buffer_after_minutes,
+          minimum_notice_minutes: modelo.minimum_notice_minutes,
+          booking_window_days: modelo.booking_window_days,
+          reminder_enabled: modelo.reminder_enabled,
+          reminder_minutes_before: modelo.reminder_minutes_before,
+          reminder_body: modelo.reminder_body,
+          reminder_extra_offsets_minutes: modelo.reminder_extra_offsets_minutes,
+        });
+        importados++;
+      }
+
+      if (importados > 0) {
+        toast.success(
+          t(
+            `${importados} serviços de Gráfica & Comunicação Visual importados com sucesso!`,
+          ),
+        );
+      } else {
+        toast.info(t("Os 4 serviços especializados de comunicação visual já estão cadastrados."));
+      }
+      router.refresh();
+    } catch (err) {
+      showApiError(err);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4" data-testid="tipos-de-agendamento-config">
       {podeEditar && servicoId && <ConfiguracaoDoServico key={servicoId} typeId={servicoId} name={tiposIniciais.find((x) => x.id === servicoId)?.name ?? ""} pessoas={pessoas} onClose={() => setServicoId(null)} onEditType={() => { setEditandoId(servicoId); setServicoId(null); }}/>}
@@ -637,9 +684,19 @@ export function TiposDeAgendamentoClient({
               </div>
             </form>
           ) : (
-            <Button size="sm" data-testid="abrir-novo-tipo" onClick={() => setCriando(true)}>
-              {t("Novo tipo de agendamento")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" data-testid="abrir-novo-tipo" onClick={() => setCriando(true)}>
+                {t("Novo tipo de agendamento")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={salvando}
+                onClick={importarModelosGrafica}
+              >
+                {t("Importar Serviços Gráfica & Comunicação Visual")}
+              </Button>
+            </div>
           )}
         </div>
       ) : null}

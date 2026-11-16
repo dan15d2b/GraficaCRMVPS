@@ -16,9 +16,9 @@
  *
  * SVG é XML com `<script>` executável. Servido do bucket público e NAVEGADO
  * diretamente (não dentro de um `<img>`, onde o script não roda), ele executa no
- * origin do Storage do projeto — e não há `Content-Security-Policy` neste
- * repositório: medido, `next.config.ts` não define `headers()` com CSP e não há
- * `middleware.ts`. Sem CSP, a única defesa que sobra é não aceitar o formato.
+ * origin do Storage do projeto — e a `Content-Security-Policy` deste repositório
+ * está em `Report-Only` (M1, GraficaCRM), o que ainda não bloqueia nada. Enquanto
+ * ela não estiver em enforce, a única defesa que sobra é não aceitar o formato.
  *
  * A recusa tem código PRÓPRIO (`logo_svg_recusado`) em vez de cair no genérico
  * de tipo não suportado porque a pessoa que sobe um SVG fez a coisa mais natural

@@ -206,3 +206,11 @@ caddy-sites/*
 
 # Curso ilustrado — fotos e site gerados (curso/capturar.ts, curso/montar.ts)
 curso/saida/
+
+# Local cache & scratch
+.pnpm-store/
+*.tmp
+_tmp_*
+proxy-full.txt
+desktop/
+

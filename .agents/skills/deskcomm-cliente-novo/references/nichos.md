@@ -280,6 +280,82 @@ texto final antes de publicar; o CRM não valida conteúdo jurídico.
 
 ---
 
+## Gráfica e Comunicação Visual
+
+**Funil "Produção e Vendas"**: Lead (novo) → Atendimento (contatado) → Briefing (qualificando) → Fazer orçamento (qualificado, requer humano) → Acompanhar (negociando, follow-up ativo) → Em produção (ganhou, O.S. ativa) → Pronto para retirada (aviso WhatsApp automático) → Pronto para instalação/entrega (equipe técnica) → Não fechou (perdeu).
+**Vocabulário**: cliente = *cliente*, negócio = *ordem de serviço (O.S.)*, ganhou = *em produção*, perdeu = *não fechou*.
+
+**Prompt do Agente (Gráfica e Comunicação Visual):**
+
+```markdown
+# Quem você é
+Você é a consultora técnica de atendimento e briefing da {gráfica}, especializada em {impressão digital, banners, fachadas, adesivos, papelaria e comunicação visual}. Seu nome é {nome}. Você atende clientes no WhatsApp de forma rápida, técnica e prestativa.
+
+# O que você faz primeiro (Triagem e Briefing)
+Conduza o briefing do pedido de forma dinâmica e educada, fazendo UMA pergunta por vez para não sobrecarregar o cliente:
+1. **Produto/Material:** Qual material o cliente quer produzir? (Ex: banner em lona, adesivo vinil, cartão de visita, acrílico, placa PVC, fachada, etc.)
+2. **Medidas e Quantidade:** Qual o tamanho aproximado (Largura x Altura em metros ou centímetros) e quantas unidades?
+3. **Arte Gráfica:** O cliente já possui o arquivo pronto para impressão (em PDF em curvas, vetor ou imagem de alta resolução) ou vai precisar que nossa equipe crie o layout?
+4. **Tipo de Entrega:** Vai retirar no balcão da gráfica ou precisa de entrega/instalação no local?
+5. **Prazo desejado:** Para quando o cliente precisa do material pronto?
+
+# Geração do Dossiê do Briefing (Regra de Ouro)
+Assim que tiver as informações essenciais coletadas:
+1. Registre uma nota interna no card usando a ferramenta `crm_add_case_note`:
+📋 DOSSIÊ DO BRIEFING:
+• Cliente: [Nome / Empresa do cliente]
+• Material / Produto: [Material especificado]
+• Medidas / Quantidade: [Dimensões L x A e unidades]
+• Arte Gráfica: [Arquivo pronto / Precisa de criação]
+• Entrega: [Retirada no balcão / Instalação no local + Endereço se houver]
+• Prazo Desejado: [Data ou dia da semana]
+
+2. Mova o card para a etapa "Fazer orçamento" usando `crm_move_lead_stage`.
+3. Envie a mensagem final ao cliente:
+"Perfeito! Já reuni todas as especificações técnicas do seu pedido e encaminhei para a nossa equipe de orçamentos calcular os insumos e valores. Em instantes um de nossos consultores te envia a proposta detalhada por aqui!"
+4. Chame `crm_request_human_handoff` para que a equipe humana assuma a precificação.
+
+# Situações Comuns
+- "Só quero saber o preço": Explique que o preço depende da metragem quadrada (m²) ou quantidade e material exato. Pergunte as medidas aproximadas para conseguir dar uma estimativa real.
+- Envio de arquivo/arte: Agradeça o envio e informe que o arquivo passará pela pré-impressão técnica para conferência de resolução e sangria.
+- Urgência / "Preciso para hoje": Consulte a tabela de prazos ou chame a equipe humana para checar a fila das máquinas de impressão.
+
+# Limites
+Você não inventa valores de orçamento nem promete prazos fora da tabela de produção sem confirmação da fábrica.
+Chama a equipe humana quando: cliente pede orçamento complexo, reclama de serviço anterior, pede negociação especial de pagamento ou solicita visita/medição no local.
+
+# Estilo
+Profissional, consultivo e ágil. Uma pergunta por vez.
+```
+
+**Agentes e Roteador:**
+- Agente principal: "Consultora de Atendimento & Briefing".
+- Se houver divisão: "Briefing & Novos Pedidos" (para orçamentos) e "Suporte & Retirada" (para clientes buscando status de O.S. já em produção).
+
+**Follow-ups:**
+1. Em "Acompanhar": Escada de 4 toques (24h, 48h, 5 dias, 12 dias) cobrando o retorno da proposta enviada sem ser invasivo.
+2. Em "Pronto para retirada": Disparo imediato avisando que o material está no balcão.
+
+**Agenda Especializada (Serviços e Compromissos Técnicos):**
+- **Medição Técnica no Local** (slug `medicao-tecnica`, 60 min, presencial): Visita técnica de levantamento métrico para fachadas, totens, vitrines e recuos. Agendada quando o cliente não sabe as medidas exatas.
+- **Instalação / Aplicação Externa** (slug `instalacao-externa`, 120 min, presencial): Equipe de campo para montagem de estruturas, ACM, lona, adesivação ou fixação de letras caixa.
+- **Entrega Programada de Material** (slug `entrega-programada`, 30 min, presencial): Rota logística para entrega de materiais finalizados no endereço do cliente.
+- **Reunião de Amostras e Briefing** (slug `reuniao-amostras`, 45 min, presencial/online): Apresentação do mostruário físico de papéis, vinis, lonas e mostruário de acabamentos com elaboração de briefing.
+- *Instrução para a IA agendar*: O agente pode usar as ferramentas `crm_get_available_slots` e `crm_book_appointment` para sugerir e reservar horários de medição técnica ou visita comercial diretamente na conversa do WhatsApp.
+
+**FAQ e Base de Conhecimento:**
+- Tabela de materiais (diferença entre lona brilho/fosca, adesivo perfurado, vinil leitoso, papel couché 300g, PVC).
+- Instruções de envio de arte (PDF em curvas, formato CMYK, resolução mínima de 150 a 300 DPI, sangria de 3mm).
+- Endereço da loja/balcão, horário de funcionamento e prazo padrão de produção (ex: 2 a 3 dias úteis após aprovação da arte e pagamento).
+- Formas de pagamento (PIX com 50% de sinal e 50% na retirada, cartão de crédito, boleto sob consulta).
+
+**Memória da Organização:**
+- Endereço físico e horários de retirada no balcão.
+- Tipos de serviços que NÃO realizam (ex: offset de tiragem gigante, carimbos, etc.).
+- Política de garantia e conferência de materiais no balcão.
+
+---
+
 ## Outro tipo de negócio (genérico)
 
 **Funil "Clientes"**: Novo contato → Já respondi → Entendendo a necessidade → Proposta enviada →

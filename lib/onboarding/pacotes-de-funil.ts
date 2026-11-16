@@ -33,6 +33,24 @@ export interface PacoteDeFunil {
 
 export const PACOTES: readonly PacoteDeFunil[] = [
   {
+    id: "grafica",
+    comoSeApresenta: "Gráfica e Comunicação Visual",
+    proposta: {
+      nome: "Produção e Vendas",
+      etapas: [
+        { nome: "Lead", passo: "new" },
+        { nome: "Atendimento", passo: "contacted" },
+        { nome: "Briefing", passo: "qualifying" },
+        { nome: "Fazer orçamento", passo: "qualified" },
+        { nome: "Acompanhar", passo: "negotiating" },
+        { nome: "Em produção", passo: "won" },
+        { nome: "Pronto para retirada", passo: null },
+        { nome: "Pronto para instalação/entrega", passo: null },
+        { nome: "Não fechou", passo: "lost" },
+      ],
+    },
+  },
+  {
     id: "clinica",
     comoSeApresenta: "Clínica, consultório ou salão",
     proposta: {
