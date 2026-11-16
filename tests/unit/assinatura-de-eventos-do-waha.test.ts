@@ -101,6 +101,14 @@ describe("os três composes assinam os mesmos eventos do canal por QR", () => {
     }
   });
 
+  it("todos assinam `label.chat.added` e `label.chat.deleted`", () => {
+    for (const arquivo of COMPOSES) {
+      const eventos = eventosDe(arquivo);
+      expect(eventos, `${arquivo} não assina label.chat.added`).toContain("label.chat.added");
+      expect(eventos, `${arquivo} não assina label.chat.deleted`).toContain("label.chat.deleted");
+    }
+  });
+
   it("a lista de eventos é IDÊNTICA nos três (a divergência fica vermelha)", () => {
     const referencia = eventosDe(COMPOSES[0]!);
     for (const arquivo of COMPOSES) {

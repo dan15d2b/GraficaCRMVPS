@@ -47,6 +47,7 @@ import { fraseDaFalhaDeCanal } from "@/lib/channels/frases-de-falha";
 import { emitirFalhaDeEntrega, telefoneDoEmbed, type EmbedDoContato } from "@/lib/messaging/falha-de-entrega";
 import type { WahaEnvelope, WahaPayload } from "@/lib/waha/envelope";
 import { bareWaMessageId, chatIdFromWaMessageId, wahaEchoExternalIds } from "@/lib/waha/message-id";
+import { listarEtiquetasWaha } from "@/lib/waha/labels";
 import { logger } from "@/lib/logger";
 import { numeroJaAquecido } from "@/lib/ai/pacing-knobs";
 import { nomeDeArquivoLimpo } from "@/lib/messaging/media/nome-de-arquivo";
@@ -2399,6 +2400,86 @@ async function handleReaction(admin: Admin, session: Session, p: WahaPayload): P
 }
 
 /**
+ * Ingestão de webhooks de etiquetas do WhatsApp (`label.chat.added`, `label.chat.deleted`).
+ */
+export async function handleLabelChatAssociation(
+  admin: Admin,
+  session: SessionStatusRow,
+  envelope: WahaEnvelope,
+  _requestId: string,
+): Promise<void> {
+  const p = envelope.payload;
+  const chatId = p?.chatId?.trim();
+  const labelId = p?.labelId?.trim();
+  if (!chatId || !labelId) return;
+
+  // 1. Descobrir o nome da etiqueta
+  let labelName: string | null = null;
+  if (p?.label && typeof (p.label as Record<string, unknown>).name === "string") {
+    labelName = (p.label as { name: string }).name;
+  } else if (session.waha_session_name) {
+    try {
+      const labels = await listarEtiquetasWaha(session.waha_session_name);
+      const found = labels.find((l) => l.id === labelId);
+      if (found) labelName = found.name;
+    } catch {
+      // Ignora falha de busca remota
+    }
+  }
+
+  if (!labelName) return;
+  const tagNormalizada = labelName.trim().toLowerCase();
+  if (!tagNormalizada) return;
+
+  // 2. Localizar o contato
+  const digits = chatId.replace(/@s\.whatsapp\.net$/, "");
+  const ehLid = chatId.endsWith("@lid");
+
+  const queryContato = (admin as unknown as SupabaseClient)
+    .from("contacts")
+    .select("id")
+    .eq("organization_id", session.organization_id);
+
+  const filtroContato = ehLid
+    ? `wa_lid.eq.${chatId},wa_identity.eq.lid:${digits}`
+    : `phone_number.eq.+${digits},phone_number.eq.${digits},wa_identity.eq.phone:+${digits},wa_identity.eq.phone:${digits}`;
+
+  const { data: contato } = await queryContato.or(filtroContato).maybeSingle();
+  if (!contato) return;
+
+  // 3. Localizar a conversa correspondente
+  const { data: conv } = await (admin as unknown as SupabaseClient)
+    .from("conversations")
+    .select("id, tags")
+    .eq("organization_id", session.organization_id)
+    .eq("contact_id", contato.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!conv) return;
+
+  const currentTags: string[] = Array.isArray(conv.tags) ? conv.tags : [];
+  const event = envelope.event;
+
+  if (event === "label.chat.added") {
+    if (currentTags.includes(tagNormalizada)) return; // Anti-loop
+    const nextTags = [...currentTags, tagNormalizada];
+    await (admin as unknown as SupabaseClient)
+      .from("conversations")
+      .update({ tags: nextTags })
+      .eq("id", conv.id);
+  } else if (event === "label.chat.deleted") {
+    if (!currentTags.includes(tagNormalizada)) return; // Anti-loop
+    const nextTags = currentTags.filter((t) => t !== tagNormalizada);
+    await (admin as unknown as SupabaseClient)
+      .from("conversations")
+      .update({ tags: nextTags })
+      .eq("id", conv.id);
+  }
+}
+
+/**
  * Roteador único de eventos WAHA. Os dois route handlers convergem aqui após
  * resolver a sessão e validar HMAC.
  */
@@ -2427,5 +2508,7 @@ export async function dispatchWahaEvent(
     await handleReaction(admin, session, payload);
   } else if (eventType === "session.status" || eventType === "state.change") {
     await handleSessionStatus(admin, session, payload);
+  } else if (eventType === "label.chat.added" || eventType === "label.chat.deleted") {
+    await handleLabelChatAssociation(admin, session, envelope, requestId);
   }
 }
