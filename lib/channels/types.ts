@@ -587,6 +587,31 @@ export interface ChannelAdapter {
      */
     contrato?: TemplateContract | null;
   }): Promise<{ externalId: string | null }>;
+
+  /**
+   * Sincroniza as etiquetas de uma conversa com o canal remoto (WhatsApp, etc.).
+   */
+  syncChatLabels?(input: {
+    sessionRef: string;
+    chatId: string;
+    tags: string[];
+    orgId: string;
+  }): Promise<void>;
+
+  /**
+   * Lista as etiquetas configuradas na plataforma remota.
+   */
+  listRemoteLabels?(input: {
+    sessionRef: string;
+  }): Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>>;
+
+  /**
+   * Busca todos os chats vinculados a uma etiqueta remota.
+   */
+  getChatsByRemoteLabel?(input: {
+    sessionRef: string;
+    labelId: string;
+  }): Promise<string[]>;
 }
 
 /** O que o transporte respondeu quando perguntamos se está de pé. */

@@ -22,6 +22,13 @@ import {
   parseWahaMessageId,
   wahaEchoExternalIds,
 } from "@/lib/waha/message-id";
+import {
+  listarEtiquetasWaha,
+  criarEtiquetaWaha,
+  definirEtiquetasDoChatWaha,
+  obterChatsPorEtiquetaWaha,
+  hexParaCorWaha,
+} from "@/lib/waha/labels";
 import { consultarNomeDaAgenda } from "@/lib/contacts/nome-da-agenda";
 import { marcarConversaComoLida, resolveWahaChatId } from "@/lib/waha/send";
 import type { FetchedMedia } from "@/lib/messaging/media/types";
@@ -378,5 +385,58 @@ export const wahaAdapter: ChannelAdapter = {
     });
 
     return { externalId: parseWahaMessageId(res) };
+  },
+
+  async syncChatLabels(input: {
+    sessionRef: string;
+    chatId: string;
+    tags: string[];
+    orgId: string;
+  }): Promise<void> {
+    const existing = await listarEtiquetasWaha(input.sessionRef);
+    const existingMap = new Map(
+      existing.map((l) => [l.name.trim().toLowerCase(), l]),
+    );
+
+    const labelIds: string[] = [];
+    let currentTotal = existing.length;
+
+    for (const tag of input.tags) {
+      const normalized = tag.trim().toLowerCase();
+      if (!normalized) continue;
+      const found = existingMap.get(normalized);
+      if (found) {
+        labelIds.push(found.id);
+      } else if (currentTotal < 20) {
+        try {
+          const created = await criarEtiquetaWaha(
+            input.sessionRef,
+            tag.trim(),
+            hexParaCorWaha(null),
+          );
+          labelIds.push(created.id);
+          existingMap.set(normalized, created);
+          currentTotal++;
+        } catch {
+          // Falha macia na criação remota
+        }
+      }
+    }
+
+    await definirEtiquetasDoChatWaha(input.sessionRef, input.chatId, labelIds);
+  },
+
+  async listRemoteLabels(input: {
+    sessionRef: string;
+  }): Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>> {
+    return listarEtiquetasWaha(input.sessionRef);
+  },
+
+  async getChatsByRemoteLabel(input: {
+    sessionRef: string;
+    labelId: string;
+  }): Promise<string[]> {
+    const chats = await obterChatsPorEtiquetaWaha(input.sessionRef, input.labelId);
+    return chats.map((c) => c.pnJid ?? c.id);
   },
 };
