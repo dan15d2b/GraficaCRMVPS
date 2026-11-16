@@ -40,6 +40,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { PainelDeTags } from "./_painel";
 import { TagsInternasForm } from "./_tags-internas-form";
+import { BotaoImportarEtiquetasWhatsapp } from "@/components/tags/BotaoImportarEtiquetasWhatsapp";
 
 export const metadata = { title: "Tags" };
 export const dynamic = "force-dynamic";
@@ -101,13 +102,18 @@ export default async function TagsPage({ searchParams }: { searchParams: Promise
 
   return (
     <div className="flex h-full flex-col gap-6 overflow-y-auto md:p-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("Tags")}</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          {t(
-            "As etiquetas que os agentes, o Inbox e o funil usam nesta organização. Renomear ou juntar corrige também as regras de agente que escrevem a etiqueta, na mesma operação.",
-          )}
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("Tags")}</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {t(
+              "As etiquetas que os agentes, o Inbox e o funil usam nesta organização. Renomear ou juntar corrige também as regras de agente que escrevem a etiqueta, na mesma operação.",
+            )}
+          </p>
+        </div>
+        <div>
+          <BotaoImportarEtiquetasWhatsapp />
+        </div>
       </header>
 
       <form method="get" className="flex max-w-xl items-center gap-2">
