@@ -28,6 +28,7 @@ import {
   definirEtiquetasDoChatWaha,
   obterChatsPorEtiquetaWaha,
   hexParaCorWaha,
+  corWahaParaHex,
 } from "@/lib/waha/labels";
 import { consultarNomeDaAgenda } from "@/lib/contacts/nome-da-agenda";
 import { marcarConversaComoLida, resolveWahaChatId } from "@/lib/waha/send";
@@ -429,7 +430,11 @@ export const wahaAdapter: ChannelAdapter = {
   async listRemoteLabels(input: {
     sessionRef: string;
   }): Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>> {
-    return listarEtiquetasWaha(input.sessionRef);
+    const labels = await listarEtiquetasWaha(input.sessionRef);
+    return labels.map((l) => ({
+      ...l,
+      colorHex: l.colorHex || corWahaParaHex(l.color),
+    }));
   },
 
   async getChatsByRemoteLabel(input: {

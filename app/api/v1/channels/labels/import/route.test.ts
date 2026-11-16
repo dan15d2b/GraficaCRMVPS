@@ -20,6 +20,14 @@ vi.mock("@/lib/channels", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/channels/session-ref", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/channels/session-ref")>();
+  return {
+    ...actual,
+    resolveSessionRef: vi.fn().mockReturnValue("test_session"),
+  };
+});
+
 describe("POST /api/v1/channels/labels/import", () => {
   const orgId = "org_123";
 
@@ -45,12 +53,12 @@ describe("POST /api/v1/channels/labels/import", () => {
 
     const mockListRemoteLabels = vi.fn().mockResolvedValue([
       { id: "1", name: "pedido em andamento", color: 19, colorHex: "#9368cf" },
-      { id: "2", name: "Tirar medidas", color: 12 },
+      { id: "2", name: "Tirar medidas", color: 12, colorHex: "#00655a" },
     ]);
     const mockGetChatsByRemoteLabel = vi.fn().mockResolvedValue([]);
 
     vi.mocked(channelsIndex.getAdapter).mockReturnValue({
-      provider: "waha",
+      provider: channelsIndex.DEFAULT_CHANNEL_PROVIDER,
       isConfigured: () => true,
       resolveRecipient: () => null,
       send: vi.fn(),
@@ -74,8 +82,7 @@ describe("POST /api/v1/channels/labels/import", () => {
                     maybeSingle: vi.fn().mockResolvedValue({
                       data: {
                         id: "sess_1",
-                        provider: "waha",
-                        waha_session_name: "test_session",
+                        provider: channelsIndex.DEFAULT_CHANNEL_PROVIDER,
                       },
                       error: null,
                     }),

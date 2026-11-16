@@ -15,7 +15,6 @@ import {
   type ChannelSessionRef,
 } from "@/lib/channels/session-ref";
 import type { ProviderDeMensagem } from "@/lib/channels/types";
-import { corWahaParaHex } from "@/lib/waha/labels";
 import { canonicalConversationTagsSchema } from "@/lib/schemas/settings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -86,7 +85,7 @@ export async function POST(_req: NextRequest): Promise<Response> {
     const nomeNorm = rl.name.trim();
     if (!nomeNorm) continue;
     const key = nomeNorm.toLowerCase();
-    const hex = rl.colorHex || corWahaParaHex(rl.color);
+    const hex = rl.colorHex ?? "#6f6f6f";
 
     canonicasSet.add(nomeNorm);
     if (!coresMap.has(key)) {
