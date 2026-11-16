@@ -4,9 +4,7 @@ import {
   hexParaCorWaha,
   listarEtiquetasWaha,
   criarEtiquetaWaha,
-  obterEtiquetasDoChatWaha,
   definirEtiquetasDoChatWaha,
-  obterChatsPorEtiquetaWaha,
   type WahaLabel,
 } from "./labels";
 

@@ -15,7 +15,6 @@ import {
   type ChannelSessionRef,
 } from "@/lib/channels/session-ref";
 import type { ProviderDeMensagem } from "@/lib/channels/types";
-import { canonicalConversationTagsSchema } from "@/lib/schemas/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
