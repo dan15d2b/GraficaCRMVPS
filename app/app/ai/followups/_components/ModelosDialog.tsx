@@ -123,7 +123,7 @@ export function ModelosDialog({ open, onOpenChange, nomesExistentes }: Props) {
           <DialogTitle>{t("Modelos prontos")}</DialogTitle>
           <DialogDescription>
             {t(
-              "Fluxos com os textos já escritos, para as quatro vezes em que um paciente some no meio do caminho. Instalar não manda mensagem para ninguém: o fluxo nasce como rascunho para você revisar.",
+              "Fluxos com os textos já escritos para resgatar orçamentos, aprovação de arte e avisos de retirada de material. Instalar não manda mensagem para ninguém: o fluxo nasce como rascunho para você revisar.",
             )}
           </DialogDescription>
         </DialogHeader>
