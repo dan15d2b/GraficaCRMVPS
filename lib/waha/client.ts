@@ -1285,7 +1285,7 @@ export class WahaClient {
   async getChatsByLabel(
     session: string,
     labelId: string,
-  ): Promise<Array<{ id: string; pnJid?: string }>> {
+  ): Promise<Array<{ id: string; pnJid?: string; accountLid?: string }>> {
     const res = await this.fetchComTeto(
       `${this.baseUrl}/api/${encodeURIComponent(session)}/labels/${encodeURIComponent(labelId)}/chats`,
       { headers: { "X-Api-Key": this.apiKey } },
@@ -1293,7 +1293,7 @@ export class WahaClient {
     if (!res.ok) {
       throw new Error(`waha_get_chats_by_label_${res.status}`);
     }
-    return res.json() as Promise<Array<{ id: string; pnJid?: string }>>;
+    return res.json() as Promise<Array<{ id: string; pnJid?: string; accountLid?: string }>>;
   }
 }
 

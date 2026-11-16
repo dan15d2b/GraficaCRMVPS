@@ -31,7 +31,7 @@ import { agenteAceitaComandoDeCelular, lerComandoDeControle } from "@/lib/escala
 import { devolverAtendimentoAoAgente } from "@/lib/escalacao/retomada";
 import { getWahaClient } from "@/lib/waha/client";
 import { acelerarPipelineDeEventos } from "@/lib/dev/kick-local-pipeline";
-import { canonicalPhoneBR } from "@/lib/channels/phone-variants";
+import { canonicalPhoneBR, phoneLookupVariants } from "@/lib/channels/phone-variants";
 import { estamparAtribuicaoDoContato, metadataDoAnuncio } from "@/lib/leads/atribuicao-de-anuncio";
 import { ancoraCtwaDaMensagem } from "@/lib/leads/prova-meta-lead-submitted";
 import { extrairEEstamparAtribuicaoGoogle } from "@/lib/plataformas-de-anuncio/google/atribuicao";
@@ -2432,17 +2432,29 @@ export async function handleLabelChatAssociation(
   if (!tagNormalizada) return;
 
   // 2. Localizar o contato
-  const digits = chatId.replace(/@s\.whatsapp\.net$/, "");
+  const rawDigits = chatId.replace(/@.*$/, "").replace(/^\+/, "");
   const ehLid = chatId.endsWith("@lid");
+
+  let filtroContato: string;
+  if (ehLid) {
+    filtroContato = `wa_lid.eq.${rawDigits},wa_identity.eq.lid:${rawDigits}`;
+  } else {
+    const variantes = phoneLookupVariants(rawDigits);
+    const parts: string[] = [];
+    for (const v of variantes) {
+      const d = v.replace(/\D/g, "");
+      parts.push(`phone_number.eq.${v}`);
+      parts.push(`phone_number.eq.${d}`);
+      parts.push(`wa_identity.eq.phone:${v}`);
+      parts.push(`wa_identity.eq.phone:${d}`);
+    }
+    filtroContato = parts.length > 0 ? parts.join(",") : `phone_number.eq.+${rawDigits}`;
+  }
 
   const queryContato = (admin as unknown as SupabaseClient)
     .from("contacts")
     .select("id")
     .eq("organization_id", session.organization_id);
-
-  const filtroContato = ehLid
-    ? `wa_lid.eq.${chatId},wa_identity.eq.lid:${digits}`
-    : `phone_number.eq.+${digits},phone_number.eq.${digits},wa_identity.eq.phone:+${digits},wa_identity.eq.phone:${digits}`;
 
   const { data: contato } = await queryContato.or(filtroContato).maybeSingle();
   if (!contato) return;

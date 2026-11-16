@@ -442,6 +442,12 @@ export const wahaAdapter: ChannelAdapter = {
     labelId: string;
   }): Promise<string[]> {
     const chats = await obterChatsPorEtiquetaWaha(input.sessionRef, input.labelId);
-    return chats.map((c) => c.pnJid ?? c.id);
+    const results: string[] = [];
+    for (const c of chats) {
+      if (c.pnJid) results.push(c.pnJid);
+      if (c.id) results.push(c.id);
+      if (c.accountLid && c.accountLid !== c.id) results.push(c.accountLid);
+    }
+    return [...new Set(results)];
   },
 };

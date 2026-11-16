@@ -15,6 +15,7 @@ import {
   type ChannelSessionRef,
 } from "@/lib/channels/session-ref";
 import type { ProviderDeMensagem } from "@/lib/channels/types";
+import { phoneLookupVariants } from "@/lib/channels/phone-variants";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -116,12 +117,24 @@ export async function POST(_req: NextRequest): Promise<Response> {
     try {
       const chats = await adapter.getChatsByRemoteLabel({ sessionRef, labelId: rl.id });
       for (const rawChatId of chats) {
-        const digits = rawChatId.replace(/@s\.whatsapp\.net$/, "");
+        const rawDigits = rawChatId.replace(/@.*$/, "").replace(/^\+/, "");
         const ehLid = rawChatId.endsWith("@lid");
 
-        const filtroContato = ehLid
-          ? `wa_lid.eq.${rawChatId},wa_identity.eq.lid:${digits}`
-          : `phone_number.eq.+${digits},phone_number.eq.${digits},wa_identity.eq.phone:+${digits},wa_identity.eq.phone:${digits}`;
+        let filtroContato: string;
+        if (ehLid) {
+          filtroContato = `wa_lid.eq.${rawDigits},wa_identity.eq.lid:${rawDigits}`;
+        } else {
+          const variantes = phoneLookupVariants(rawDigits);
+          const parts: string[] = [];
+          for (const v of variantes) {
+            const d = v.replace(/\D/g, "");
+            parts.push(`phone_number.eq.${v}`);
+            parts.push(`phone_number.eq.${d}`);
+            parts.push(`wa_identity.eq.phone:${v}`);
+            parts.push(`wa_identity.eq.phone:${d}`);
+          }
+          filtroContato = parts.length > 0 ? parts.join(",") : `phone_number.eq.+${rawDigits}`;
+        }
 
         const { data: contato } = await supabase
           .from("contacts")

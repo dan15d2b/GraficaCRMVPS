@@ -93,7 +93,7 @@ export async function obterChatsPorEtiquetaWaha(
   session: string,
   labelId: string,
   client?: WahaClient | null,
-): Promise<Array<{ id: string; pnJid?: string }>> {
+): Promise<Array<{ id: string; pnJid?: string; accountLid?: string }>> {
   const cli = resolverCliente(client);
   return cli.getChatsByLabel(session, labelId);
 }
