@@ -1212,6 +1212,89 @@ export class WahaClient {
     }
     return res.json();
   }
+
+  async getLabels(
+    session: string,
+  ): Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>> {
+    const res = await this.fetchComTeto(
+      `${this.baseUrl}/api/${encodeURIComponent(session)}/labels`,
+      { headers: { "X-Api-Key": this.apiKey } },
+    );
+    if (!res.ok) {
+      throw new Error(`waha_get_labels_${res.status}`);
+    }
+    return res.json() as Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>>;
+  }
+
+  async createLabel(
+    session: string,
+    label: { name: string; color?: number },
+  ): Promise<{ id: string; name: string; color?: number; colorHex?: string }> {
+    const res = await this.fetchComTeto(
+      `${this.baseUrl}/api/${encodeURIComponent(session)}/labels`,
+      {
+        method: "POST",
+        headers: {
+          "X-Api-Key": this.apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(label),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`waha_create_label_${res.status}`);
+    }
+    return res.json() as Promise<{ id: string; name: string; color?: number; colorHex?: string }>;
+  }
+
+  async getChatLabels(
+    session: string,
+    chatId: string,
+  ): Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>> {
+    const res = await this.fetchComTeto(
+      `${this.baseUrl}/api/${encodeURIComponent(session)}/labels/chats/${encodeURIComponent(chatId)}`,
+      { headers: { "X-Api-Key": this.apiKey } },
+    );
+    if (!res.ok) {
+      throw new Error(`waha_get_chat_labels_${res.status}`);
+    }
+    return res.json() as Promise<Array<{ id: string; name: string; color?: number; colorHex?: string }>>;
+  }
+
+  async putChatLabels(
+    session: string,
+    chatId: string,
+    labelIds: string[],
+  ): Promise<void> {
+    const res = await this.fetchComTeto(
+      `${this.baseUrl}/api/${encodeURIComponent(session)}/labels/chats/${encodeURIComponent(chatId)}`,
+      {
+        method: "PUT",
+        headers: {
+          "X-Api-Key": this.apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ labels: labelIds.map((id) => ({ id })) }),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`waha_put_chat_labels_${res.status}`);
+    }
+  }
+
+  async getChatsByLabel(
+    session: string,
+    labelId: string,
+  ): Promise<Array<{ id: string; pnJid?: string }>> {
+    const res = await this.fetchComTeto(
+      `${this.baseUrl}/api/${encodeURIComponent(session)}/labels/${encodeURIComponent(labelId)}/chats`,
+      { headers: { "X-Api-Key": this.apiKey } },
+    );
+    if (!res.ok) {
+      throw new Error(`waha_get_chats_by_label_${res.status}`);
+    }
+    return res.json() as Promise<Array<{ id: string; pnJid?: string }>>;
+  }
 }
 
 /**
