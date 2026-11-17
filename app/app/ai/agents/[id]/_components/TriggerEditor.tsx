@@ -241,6 +241,7 @@ function ListaDeFunis({
   selecionados,
   onChange,
   disabled,
+  variante = "inclusao",
 }: {
   id: string;
   rotulo: string;
@@ -249,27 +250,34 @@ function ListaDeFunis({
   selecionados: readonly string[];
   onChange: (ids: string[]) => void;
   disabled?: boolean;
+  variante?: "exclusao" | "inclusao";
 }) {
   if (!funis || funis.length === 0) return null;
   const marcados = new Set(selecionados);
   return (
     <div className="space-y-1.5 pt-1" id={id}>
-      <Label className="text-sm font-medium text-foreground">{rotulo}</Label>
+      <Label className="text-sm font-semibold text-foreground">{rotulo}</Label>
       <div className="flex flex-wrap gap-2 pt-0.5">
         {funis.map((f) => {
           const marcado = marcados.has(f.id);
+          const estiloMarcado =
+            variante === "exclusao"
+              ? "border-rose-400 bg-rose-100/90 text-rose-950 font-bold dark:border-rose-700 dark:bg-rose-950/70 dark:text-rose-100 shadow-xs"
+              : "border-emerald-500 bg-emerald-100/90 text-emerald-950 font-bold dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-100 shadow-xs";
+          const corAccent = variante === "exclusao" ? "accent-rose-600" : "accent-emerald-600";
+
           return (
             <label
               key={f.id}
               className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
                 marcado
-                  ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
+                  ? estiloMarcado
                   : "border-border/80 bg-background text-foreground/80 hover:bg-muted/50"
               }`}
             >
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded accent-primary"
+                className={`h-4 w-4 rounded ${corAccent}`}
                 checked={marcado}
                 disabled={disabled}
                 aria-label={f.name}
@@ -345,6 +353,7 @@ function ListaDeOrigens({
   selecionados,
   onChange,
   disabled,
+  variante = "inclusao",
 }: {
   id: string;
   rotulo: string;
@@ -352,6 +361,7 @@ function ListaDeOrigens({
   selecionados: readonly string[];
   onChange: (origens: string[]) => void;
   disabled?: boolean;
+  variante?: "exclusao" | "inclusao";
 }) {
   const t = useT();
   const marcados = new Set(selecionados.map((o) => o.toLowerCase()));
@@ -360,23 +370,29 @@ function ListaDeOrigens({
   const opcoes = [...conhecidas, ...extras];
   return (
     <div className="space-y-1.5 pt-1" id={id}>
-      <Label className="text-sm font-medium text-foreground">{rotulo}</Label>
+      <Label className="text-sm font-semibold text-foreground">{rotulo}</Label>
       <div className="flex flex-wrap gap-2 pt-0.5">
         {opcoes.map((origem) => {
           const marcado = marcados.has(origem.toLowerCase());
           const nome = rotuloDaOrigem(origem, t);
+          const estiloMarcado =
+            variante === "exclusao"
+              ? "border-rose-400 bg-rose-100/90 text-rose-950 font-bold dark:border-rose-700 dark:bg-rose-950/70 dark:text-rose-100 shadow-xs"
+              : "border-emerald-500 bg-emerald-100/90 text-emerald-950 font-bold dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-100 shadow-xs";
+          const corAccent = variante === "exclusao" ? "accent-rose-600" : "accent-emerald-600";
+
           return (
             <label
               key={origem}
               className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
                 marcado
-                  ? "border-primary bg-primary/10 text-primary dark:bg-primary/20"
+                  ? estiloMarcado
                   : "border-border/80 bg-background text-foreground/80 hover:bg-muted/50"
               }`}
             >
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded accent-primary"
+                className={`h-4 w-4 rounded ${corAccent}`}
                 checked={marcado}
                 disabled={disabled}
                 aria-label={nome}
@@ -535,19 +551,23 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
         </div>
 
         {/* ─── REGRAS DE BLOQUEIO (NÃO ATENDER) ─── */}
-        <div className="space-y-3.5 rounded-md border border-rose-200/90 bg-rose-50/40 p-4 dark:border-rose-900/60 dark:bg-rose-950/20">
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-rose-500" />
-            <h4 className="text-sm font-semibold text-rose-950 dark:text-rose-200">
-              {t("Regras de Bloqueio (Não atender)")}
-            </h4>
-            <span className="text-xs text-rose-700/80 dark:text-rose-400">
-              {t("— quem tiver qualquer um destes itens NÃO será respondido pelo agente")}
+        <div className="space-y-4 rounded-xl border-2 border-rose-300/90 bg-rose-50/70 p-5 dark:border-rose-850 dark:bg-rose-950/30 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white font-black text-xs shadow-xs">
+              ✕
             </span>
+            <div>
+              <h4 className="text-base font-bold text-rose-950 dark:text-rose-100">
+                {t("Regras de Bloqueio (Quem o agente NÃO deve responder)")}
+              </h4>
+              <p className="text-xs font-medium text-rose-800/90 dark:text-rose-300">
+                {t("Qualquer contato que coincidir com estas regras será barrado e atendido apenas pela equipe humana.")}
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-1.5 pt-1">
-            <Label htmlFor="exclude_tags" className="text-sm font-medium text-foreground">
+          <div className="space-y-2 pt-1">
+            <Label htmlFor="exclude_tags" className="text-sm font-bold text-rose-950 dark:text-rose-100">
               {t("Não atender quem tem estas etiquetas")}
             </Label>
             <CampoDeEtiquetas
@@ -568,6 +588,7 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
             selecionados={value.filters.exclude_pipeline_ids ?? []}
             onChange={(ids) => patchFilters({ exclude_pipeline_ids: ids })}
             disabled={disabled}
+            variante="exclusao"
           />
 
           <ListaDeOrigens
@@ -577,23 +598,28 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
             selecionados={value.filters.exclude_sources ?? []}
             onChange={(origens) => patchFilters({ exclude_sources: origens })}
             disabled={disabled}
+            variante="exclusao"
           />
         </div>
 
         {/* ─── REGRAS DE ATENDIMENTO (ATENDER SÓ QUEM) ─── */}
-        <div className="space-y-3.5 rounded-md border border-sky-200/90 bg-sky-50/40 p-4 dark:border-sky-900/60 dark:bg-sky-950/20">
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500" />
-            <h4 className="text-sm font-semibold text-sky-950 dark:text-sky-200">
-              {t("Regras de Atendimento (Atender só quem)")}
-            </h4>
-            <span className="text-xs text-sky-700/80 dark:text-sky-400">
-              {t("— deixe em branco para qualquer um poder ser atendido")}
+        <div className="space-y-4 rounded-xl border-2 border-emerald-300/90 bg-emerald-50/70 p-5 dark:border-emerald-850 dark:bg-emerald-950/30 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white font-black text-xs shadow-xs">
+              ✓
             </span>
+            <div>
+              <h4 className="text-base font-bold text-emerald-950 dark:text-emerald-100">
+                {t("Regras de Atendimento (Atender SOMENTE quem cumprir estes critérios)")}
+              </h4>
+              <p className="text-xs font-medium text-emerald-800/90 dark:text-emerald-300">
+                {t("Deixe tudo desmarcado para que qualquer contato geral possa ser atendido normalmente.")}
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-1.5 pt-1">
-            <Label htmlFor="include_tags" className="text-sm font-medium text-foreground">
+          <div className="space-y-2 pt-1">
+            <Label htmlFor="include_tags" className="text-sm font-bold text-emerald-950 dark:text-emerald-100">
               {t("Atender só quem tem estas etiquetas")}
             </Label>
             <CampoDeEtiquetas
@@ -614,6 +640,7 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
             selecionados={value.filters.include_pipeline_ids ?? []}
             onChange={(ids) => patchFilters({ include_pipeline_ids: ids })}
             disabled={disabled}
+            variante="inclusao"
           />
 
           <ListaDeOrigens
@@ -623,6 +650,7 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
             selecionados={value.filters.include_sources ?? []}
             onChange={(origens) => patchFilters({ include_sources: origens })}
             disabled={disabled}
+            variante="inclusao"
           />
         </div>
 
