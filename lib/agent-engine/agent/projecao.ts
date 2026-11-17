@@ -69,6 +69,17 @@ export interface MensagemProjetada {
   quem?: string;
 }
 
+export interface PedidoProjetado {
+  titulo: string;
+  etapa: string | null;
+  valor: string | null;
+  prazo: string | null;
+  status: string;
+  numero_orcamento?: string | null;
+  itens?: string | null;
+  condicao_pagamento?: string | null;
+}
+
 /** O contexto como o Conversador o lê. Tudo o que não está aqui, ele não vê. */
 export interface ContextoProjetado {
   contato: {
@@ -86,6 +97,7 @@ export interface ContextoProjetado {
    * não passa cru).
    */
   ultima_proposta: { numero_e_ano: string | null; status: string; motivo_recusa: string | null } | null;
+  pedidos_e_orcamentos?: PedidoProjetado[];
   mensagens: MensagemProjetada[];
 }
 
@@ -134,6 +146,16 @@ export function projetarContexto(ctx: LeadContext): ContextoProjetado {
             status: ROTULO_STATUS_PROPOSTA[ctx.last_proposal.status] ?? ctx.last_proposal.status,
             motivo_recusa: ctx.last_proposal.decision_reason,
           },
+    pedidos_e_orcamentos: (ctx.deals ?? []).map((d) => ({
+      titulo: d.title,
+      etapa: d.stage_name,
+      valor: d.value_formatted,
+      prazo: d.prazo_entrega ?? d.expected_close_date,
+      status: d.status,
+      numero_orcamento: d.numero_orcamento ?? null,
+      itens: d.itens ?? null,
+      condicao_pagamento: d.condicao_pagamento ?? null,
+    })),
     mensagens: ctx.messages.map((m) => {
       const base: MensagemProjetada = {
         // 'inbound'/'outbound' é vocabulário de sistema e já apareceu parafraseado

@@ -16,6 +16,8 @@ interface MundoOpts {
   propostas?: Array<Record<string, unknown>>;
   /** Linhas que a query do histórico devolve (#2729). */
   historico?: Array<Record<string, unknown>>;
+  /** Linhas que a query de crm_leads devolve. */
+  leads?: Array<Record<string, unknown>>;
 }
 
 function montarDb(opts: MundoOpts = {}) {
@@ -41,7 +43,7 @@ function montarDb(opts: MundoOpts = {}) {
       }
       // O contexto também pode consultar `crm_leads` — sem negócio aberto,
       // o que estes casos não medem.
-      if (sql.includes("from crm_leads")) return { rows: [] };
+      if (sql.includes("from crm_leads")) return { rows: opts.leads ?? [] };
       throw new Error(`query não mockada: ${sql.slice(0, 60)}`);
     }),
   };
@@ -159,5 +161,42 @@ describe("getLeadContext — remetente do grupo (#2729)", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.context.messages[0]).not.toHaveProperty("sender");
+  });
+});
+
+describe("getLeadContext — pedidos e orçamentos (deals)", () => {
+  it("carrega pedidos ativos do contato com valor formatado e prazo", async () => {
+    const { db } = montarDb({
+      propostas: [],
+      leads: [
+        {
+          id: "lead-1",
+          title: "3 Lona - Placas Metalon",
+          value_cents: 156000,
+          currency: "BRL",
+          expected_close_date: "2026-11-19T00:00:00Z",
+          status: "open",
+          custom_fields: { numero_orcamento: "000995", prazo_entrega: "3 dias úteis", condicao_pagamento: "50% entrada" },
+          stage_name: "Em Produção",
+          pipeline_name: "Produção",
+        },
+      ],
+    });
+
+    const r = await getLeadContext(db as never, {} as never, INPUT, KNOBS);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    expect(r.context.deals).toBeDefined();
+    expect(r.context.deals).toHaveLength(1);
+    expect(r.context.deals?.[0]).toMatchObject({
+      title: "3 Lona - Placas Metalon",
+      value_cents: 156000,
+      value_formatted: "R$ 1.560,00",
+      stage_name: "Em Produção",
+      expected_close_date: "2026-11-19",
+      numero_orcamento: "000995",
+      prazo_entrega: "3 dias úteis",
+    });
   });
 });

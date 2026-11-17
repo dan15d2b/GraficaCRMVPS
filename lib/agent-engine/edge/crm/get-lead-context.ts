@@ -19,6 +19,7 @@ import { logger } from '@/lib/logger';
 import { nomeDoContato } from '@/lib/contacts/rotulo-do-contato';
 import { lerRemetenteDeGrupo } from '@/lib/messaging/remetente-de-grupo';
 import { frameMediaBody, INICIO_DA_MOLDURA_DE_MIDIA, MARCADOR_IMAGEM_NAO_VISTA } from './moldura-de-midia';
+import { extrairOrcamentoGrafico } from '@/lib/propostas/orcamento-grafico';
 
 // A régua mora num módulo folha para a tela usar a mesma conta (ver o cabeçalho de lá).
 import { countPayloadTokens } from '@/lib/ai/estimativa-de-tokens';
@@ -109,6 +110,24 @@ export interface UltimaProposta {
   ano: number | null;
 }
 
+/**
+ * Pedidos e orçamentos ativos do contato (linhas de crm_leads e orçamentos gráficos).
+ */
+export interface LeadDealContext {
+  id?: string;
+  title: string;
+  stage_name: string | null;
+  pipeline_name: string | null;
+  value_cents: number | null;
+  value_formatted: string | null;
+  expected_close_date: string | null;
+  status: string;
+  numero_orcamento?: string | null;
+  itens?: string | null;
+  prazo_entrega?: string | null;
+  condicao_pagamento?: string | null;
+}
+
 /** Payload curado que o modelo recebe. */
 export interface LeadContext {
   /** ⚠️ É o id do CONTATO, não de um lead do funil. Ver `contact_id` abaixo. */
@@ -160,6 +179,8 @@ export interface LeadContext {
    * de criar).
    */
   last_proposal?: UltimaProposta | null;
+  /** Pedidos, ordens de produção e orçamentos do cliente. */
+  deals?: LeadDealContext[];
   /** Últimas N mensagens, da mais antiga para a mais nova. */
   messages: LeadContextMessage[];
 }
@@ -395,8 +416,126 @@ export async function getLeadContext(
     }
   };
 
-  const [{ conversationId, history, previousOutcomes }, lastHumanDecision, last_proposal] =
-    await Promise.all([conversaHistoricoEDesfechos(), ultimaDecisao(), ultimaProposta()]);
+  const pedidosEOrcamentos = async (): Promise<LeadDealContext[]> => {
+    try {
+      const { rows } = await db.query<{
+        id: string;
+        title: string;
+        value_cents: number | null;
+        currency: string | null;
+        expected_close_date: string | null;
+        status: string;
+        custom_fields: Record<string, unknown> | null;
+        stage_name: string | null;
+        pipeline_name: string | null;
+      }>(
+        `select l.id, l.title, l.value_cents, l.currency, l.expected_close_date::text,
+                l.status, l.custom_fields,
+                s.name as stage_name, p.name as pipeline_name
+           from crm_leads l
+           left join crm_stages s on s.id = l.stage_id
+           left join crm_pipelines p on p.id = l.pipeline_id
+          where l.organization_id = $1 and l.contact_id = $2
+          order by l.updated_at desc
+          limit 5`,
+        [input.tenantId, input.leadId],
+      );
+
+      return rows.map((r) => {
+        const valFmt =
+          r.value_cents != null
+            ? `R$ ${(r.value_cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : null;
+        const cf = r.custom_fields ?? {};
+        const closeDate = r.expected_close_date ? (r.expected_close_date.split('T')[0] ?? null) : null;
+        const prazo = ((cf.prazo_entrega as string | undefined) ?? closeDate) ?? null;
+        return {
+          id: r.id,
+          title: r.title,
+          stage_name: r.stage_name,
+          pipeline_name: r.pipeline_name,
+          value_cents: r.value_cents,
+          value_formatted: valFmt,
+          expected_close_date: closeDate,
+          status: r.status,
+          numero_orcamento: (cf.numero_orcamento as string | undefined) ?? null,
+          itens: (cf.itens as string | undefined) ?? null,
+          prazo_entrega: prazo,
+          condicao_pagamento: (cf.condicao_pagamento as string | undefined) ?? null,
+        };
+      });
+    } catch {
+      return [];
+    }
+  };
+
+  const ultimoOrcamentoEmMensagem = async (): Promise<LeadDealContext | null> => {
+    try {
+      const { rows } = await db.query<{ media_derived_text: string | null; sent_at: string }>(
+        `select media_derived_text, sent_at::text
+           from messages
+          where organization_id = $1 and contact_id = $2
+            and media_derived_text is not null
+            and (media_derived_text ilike '%orçamento :%' or media_derived_text ilike '%Total: R$%')
+          order by sent_at desc
+          limit 1`,
+        [input.tenantId, input.leadId],
+      );
+      if (rows[0]?.media_derived_text) {
+        const parsed = extrairOrcamentoGrafico(rows[0].media_derived_text, new Date(rows[0].sent_at));
+        if (parsed && (parsed.valorCents || parsed.numero)) {
+          return {
+            id: 'orcamento-recente',
+            title: parsed.itensResumo ?? `Orçamento #${parsed.numero ?? ''}`,
+            stage_name: 'Orçamento Enviado',
+            pipeline_name: 'Vendas',
+            value_cents: parsed.valorCents,
+            value_formatted: parsed.valorFormatado,
+            expected_close_date: parsed.dataEstimadaIso,
+            status: 'open',
+            numero_orcamento: parsed.numero,
+            itens: parsed.itensResumo,
+            prazo_entrega: parsed.prazoTexto,
+            condicao_pagamento: parsed.condicaoPagamento,
+          };
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const [
+    { conversationId, history, previousOutcomes },
+    lastHumanDecision,
+    last_proposal,
+    dealsFromDb,
+    recentQuoteFromMsg,
+  ] = await Promise.all([
+    conversaHistoricoEDesfechos(),
+    ultimaDecisao(),
+    ultimaProposta(),
+    pedidosEOrcamentos(),
+    ultimoOrcamentoEmMensagem(),
+  ]);
+
+  const deals = [...dealsFromDb];
+  const primeiro = deals[0];
+  if (deals.length === 0 && recentQuoteFromMsg) {
+    deals.push(recentQuoteFromMsg);
+  } else if (recentQuoteFromMsg && primeiro && !primeiro.value_cents) {
+    deals[0] = {
+      ...primeiro,
+      value_cents: recentQuoteFromMsg.value_cents ?? primeiro.value_cents,
+      value_formatted: recentQuoteFromMsg.value_formatted ?? primeiro.value_formatted,
+      expected_close_date: recentQuoteFromMsg.expected_close_date ?? primeiro.expected_close_date,
+      numero_orcamento: recentQuoteFromMsg.numero_orcamento ?? primeiro.numero_orcamento,
+      itens: recentQuoteFromMsg.itens ?? primeiro.itens,
+      prazo_entrega: recentQuoteFromMsg.prazo_entrega ?? primeiro.prazo_entrega,
+      condicao_pagamento: recentQuoteFromMsg.condicao_pagamento ?? primeiro.condicao_pagamento,
+    };
+  }
 
   // LGPD: base legal derivada DIRETO do contato (fonte da verdade, mesmo banco).
   // isProspecting=false: o MVP é inbound + follow-up — ambos respondem a lead que
@@ -435,6 +574,7 @@ export async function getLeadContext(
       conversation_id: conversationId,
       last_human_decision: lastHumanDecision,
       last_proposal,
+      deals,
     },
     history,
     knobs.maxTokens,
@@ -490,7 +630,7 @@ export function corpoDaMensagem(m: CorpoDaMensagemRow, verImagens = true): strin
   // vem ENQUADRADO (frameMediaBody) — sem isso o agente caía no reflexo
   // "não consigo ver mídia" mesmo tendo o conteúdo. Sem derivado, marcador [tipo].
   return derived
-    ? frameMediaBody(m.type, m.body, derived)
+    ? frameMediaBody(m.type, m.body, derived, m.direction)
     : (m.body ?? (hasMedia ? `[${m.type}]` : ''));
 }
 

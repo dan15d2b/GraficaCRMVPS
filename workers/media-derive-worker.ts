@@ -50,6 +50,7 @@ import { DETALHE_TECNICO } from "@/lib/event-log/aviso-de-evento-morto";
 import { MENSAGEM_REDIGIDA } from "@/lib/lgpd/cascata";
 import { lerPessoalDaConversa } from "@/lib/contacts/contato-pessoal";
 import { avaliarPedidosFalados } from "@/workers/media-derive-worker.pedidos";
+import { sincronizarOrcamentoComLead } from "@/lib/propostas/orcamento-grafico";
 
 export const MEDIA_DERIVE_CONSUMER_KEY = "media_derive_v1";
 const DRAIN_MAX_ATTEMPTS = 5; // espelho de lib/event-log/drain.ts
@@ -513,6 +514,18 @@ export async function deriveMessageMedia(row: EventRow): Promise<HandlerResult> 
       messageId: msg.id,
       requestId: row.id,
     });
+    // Se o texto derivado (especialmente de documento PDF) contém dados de proposta/orçamento gráfico,
+    // sincroniza automaticamente com os cards de lead/produção do CRM.
+    if (msg.type === "document" || text.includes("orçamento") || text.includes("Total:")) {
+      await sincronizarOrcamentoComLead(admin, {
+        organizationId: msg.organization_id,
+        conversationId: msg.conversation_id,
+        texto: text,
+        dataMensagem: msg.created_at ? new Date(msg.created_at) : undefined,
+      }).catch((err) => {
+        logger.warn("[media-derive] falha ao sincronizar orcamento com lead", { erro: String(err) });
+      });
+    }
     // ─── O pedido DITO no áudio, agora que ele virou texto (#2233) ──────────
     //
     // A cascata da onda 3 sobre a transcrição — a regra de hoje e, só onde ela

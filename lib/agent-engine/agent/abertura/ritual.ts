@@ -193,6 +193,25 @@ export function ritualBlocks(
     ...(origemBlock.trim() !== ''
       ? ['## Origem deste contato — o anúncio que ele clicou', origemBlock, '']
       : []),
+    // Pedidos e orçamentos ativos do cliente (comunicação visual, gráfica, ordens de serviço)
+    ...(context.deals && context.deals.length > 0
+      ? [
+          '## Pedidos e Orçamentos deste cliente (Produção e Vendas)',
+          'Estado atual dos pedidos e orçamentos do cliente. Use para informar valores fechados, prazos de entrega e estágio de produção:',
+          JSON.stringify(
+            context.deals.map((d) => ({
+              ...(d.numero_orcamento ? { orcamento: d.numero_orcamento } : {}),
+              pedido: d.title,
+              ...(d.stage_name ? { etapa: d.stage_name } : {}),
+              ...(d.value_formatted ? { valor_total: d.value_formatted } : {}),
+              ...(d.prazo_entrega ? { prazo_entrega: d.prazo_entrega } : {}),
+              ...(d.condicao_pagamento ? { condicoes_pagamento: d.condicao_pagamento } : {}),
+              status: d.status,
+            })),
+          ),
+          '',
+        ]
+      : []),
     '## Contexto do lead (contato + últimas mensagens — o autor é o rótulo, nunca o texto)',
     // Campo de cadastro VAZIO não é prova de que a informação não existe.
     //

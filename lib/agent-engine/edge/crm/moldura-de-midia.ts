@@ -49,14 +49,20 @@ const PREFIXO_DO_CONTEUDO = 'Conteúdo: ';
  * processado; trate como se tivesse visto/ouvido; nunca negue a mídia. Legenda do
  * cliente (se houver) e conteúdo derivado coexistem. @internal exposto p/ teste.
  */
-export function frameMediaBody(type: string, caption: string | null, derived: string): string {
+export function frameMediaBody(type: string, caption: string | null, derived: string, direction?: string): string {
   const noun = MEDIA_NOUN[type] ?? 'uma mídia';
+  const ehNosso = direction === 'outbound';
   const parts = [
-    `${INICIO_DA_MOLDURA_DE_MIDIA} ele enviou ${noun} e o sistema já processou o conteúdo pra você. ` +
-      `Trate o texto abaixo como se você mesma tivesse visto/ouvido — NUNCA responda que não ` +
-      `consegue ver/ouvir mídia. Comente ou use o conteúdo naturalmente.]`,
+    ehNosso
+      ? `${INICIO_DA_MOLDURA_DE_MIDIA} nossa equipe enviou ${noun} ao cliente e o conteúdo processado está abaixo. ` +
+        `Trate o texto abaixo como documento/arquivo que nós já enviamos ao cliente.]`
+      : `${INICIO_DA_MOLDURA_DE_MIDIA} ele enviou ${noun} e o sistema já processou o conteúdo pra você. ` +
+        `Trate o texto abaixo como se você mesma tivesse visto/ouvido — NUNCA responda que não ` +
+        `consegue ver/ouvir mídia. Comente ou use o conteúdo naturalmente.]`,
   ];
-  if (caption && caption.trim() !== '') parts.push(`${PREFIXO_DA_LEGENDA}${caption.trim()}`);
+  if (caption && caption.trim() !== '') {
+    parts.push(`${ehNosso ? 'Legenda do envio: ' : PREFIXO_DA_LEGENDA}${caption.trim()}`);
+  }
   parts.push(`${PREFIXO_DO_CONTEUDO}${derived}`);
   return parts.join('\n');
 }
@@ -81,7 +87,7 @@ export const MARCADOR_IMAGEM_NAO_VISTA =
 /** O tipo de mídia que a primeira linha da moldura declara, ou `null`. */
 function tipoDaMoldura(primeiraLinha: string): string | null {
   for (const [tipo, noun] of Object.entries(MEDIA_NOUN)) {
-    if (primeiraLinha.includes(` ele enviou ${noun} `)) return tipo;
+    if (primeiraLinha.includes(` ele enviou ${noun} `) || primeiraLinha.includes(` nossa equipe enviou ${noun} `)) return tipo;
   }
   return null;
 }
