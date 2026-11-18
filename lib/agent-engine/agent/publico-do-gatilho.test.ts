@@ -123,6 +123,28 @@ describe('passaNoPublico — a decisão', () => {
     ).toBe(false);
   });
 
+  it('exclude_tags com "*" ou "todas" barra QUALQUER conversa/contato com etiqueta', () => {
+    const bloqueiaTudo = publico({
+      excluirEtiquetas: ['*'],
+    });
+    // Sem etiqueta: passa
+    expect(passaNoPublico(bloqueiaTudo, { etiquetas: [], funisAbertos: [] })).toBe(true);
+    // Com qualquer etiqueta: é barrado
+    expect(passaNoPublico(bloqueiaTudo, { etiquetas: ['qualquer_tag'], funisAbertos: [] })).toBe(false);
+    expect(passaNoPublico(bloqueiaTudo, { etiquetas: ['orçamento'], funisAbertos: [] })).toBe(false);
+    expect(avaliarPublico(bloqueiaTudo, { etiquetas: ['orçamento'], funisAbertos: [] })).toEqual({
+      passa: false,
+      regra: 'barrado_por_etiqueta_excluida',
+      valor: '*',
+    });
+
+    const bloqueiaComTodas = publico({
+      excluirEtiquetas: ['todas'],
+    });
+    expect(passaNoPublico(bloqueiaComTodas, { etiquetas: [], funisAbertos: [] })).toBe(true);
+    expect(passaNoPublico(bloqueiaComTodas, { etiquetas: ['pedido em andamento'], funisAbertos: [] })).toBe(false);
+  });
+
   it('include_pipeline_ids: exige negócio ABERTO em um dos funis', () => {
     const p = publico({ incluirFunis: ['funil-suporte'] });
     expect(passaNoPublico(p, { etiquetas: [], funisAbertos: ['funil-suporte'] })).toBe(true);

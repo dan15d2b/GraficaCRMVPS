@@ -208,6 +208,13 @@ export function avaliarPublico(publico: PublicoDoAgente, fatos: FatosDoContato):
   const origem = typeof fatos.origem === 'string' && fatos.origem.trim() !== '' ? chave(fatos.origem) : null;
 
   // 1. A EXCLUSÃO VENCE — nem a inclusão reabre.
+  const barraQualquerEtiqueta = publico.excluirEtiquetas.some(
+    (tag) => tag === '*' || chave(tag) === 'todas' || chave(tag) === 'qualquer',
+  );
+  if (barraQualquerEtiqueta && temEtiqueta.size > 0) {
+    return { passa: false, regra: 'barrado_por_etiqueta_excluida', valor: '*' };
+  }
+
   for (const tag of publico.excluirEtiquetas) {
     if (temEtiqueta.has(chave(tag))) {
       return { passa: false, regra: 'barrado_por_etiqueta_excluida', valor: tag };

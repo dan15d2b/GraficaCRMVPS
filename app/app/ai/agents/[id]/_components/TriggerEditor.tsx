@@ -173,7 +173,7 @@ function CampoDeEtiquetas({
                   : "border border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-200"
               }`}
             >
-              <span>{tag}</span>
+              <span>{tag === "*" ? t("Todas as etiquetas (*)") : tag}</span>
               {!disabled && (
                 <button
                   type="button"
@@ -210,6 +210,17 @@ function CampoDeEtiquetas({
             {t("Clique rápido para adicionar tags existentes:")}
           </p>
           <div className="flex flex-wrap gap-1.5">
+            {variante === "exclusao" && !tagsSelecionadas.some((t) => t === "*" || t.toLowerCase() === "todas") && (
+              <button
+                type="button"
+                onClick={() => adicionarTag("*")}
+                disabled={disabled}
+                className="inline-flex items-center gap-1 rounded-md border border-rose-400 bg-rose-100/80 dark:border-rose-700 dark:bg-rose-950/80 px-2 py-0.5 text-xs font-bold text-rose-900 dark:text-rose-200 hover:border-rose-500 hover:bg-rose-200 transition-all cursor-pointer"
+                title={t("Bloquear qualquer conversa que possua qualquer etiqueta do WhatsApp")}
+              >
+                <span>🛡️ + {t("Todas as etiquetas (*)")}</span>
+              </button>
+            )}
             {sugestoes.slice(0, 16).map((sugestao) => (
               <button
                 key={sugestao}
