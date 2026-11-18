@@ -39,3 +39,24 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/deskcommcrm:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy-vps:
+    name: Notificar e Atualizar VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy na VPS via SSH (se configurado)
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST || '18.230.143.108' }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "Aviso: VPS_SSH_KEY não configurado nos Secrets do GitHub."
+            echo "O Watchtower ativo na VPS (18.230.143.108) fará o download e a atualização da nova imagem automaticamente em até 60 segundos."
+            exit 0
+          fi
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh -o StrictHostKeyChecking=no ubuntu@$VPS_HOST 'cd /home/ubuntu/deskcommcrm && git pull origin main && docker compose -f docker-compose.prod.yml pull app && docker compose -f docker-compose.prod.yml up -d --no-deps app'
+          echo "Deploy na VPS concluído com sucesso!"
