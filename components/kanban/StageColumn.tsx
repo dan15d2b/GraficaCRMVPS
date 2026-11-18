@@ -50,6 +50,22 @@ interface StageColumnProps {
   somenteLeitura?: boolean;
 }
 
+function corPadraoDaEtapa(nome: string, isWon?: boolean, isLost?: boolean): string {
+  if (isWon) return "#10b981";
+  if (isLost) return "#ef4444";
+  const n = nome
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (n.includes("lead") || n.includes("entrada")) return "#3b82f6";
+  if (n.includes("orcamento") || n.includes("medida") || n.includes("briefing")) return "#f59e0b";
+  if (n.includes("acompanhar") || n.includes("proposta")) return "#8b5cf6";
+  if (n.includes("producao")) return "#10b981";
+  if (n.includes("retirada") || n.includes("entrega") || n.includes("instalacao")) return "#06b6d4";
+  if (n.includes("concluido") || n.includes("final")) return "#64748b";
+  return "#6366f1";
+}
+
 export function StageColumn({
   stage,
   leads,
@@ -144,9 +160,8 @@ export function StageColumn({
     ancora.current = null;
     onSelectMany?.(idsVisiveis, !todosSelecionados);
   };
-  const accentStyle: CSSProperties | undefined = stage.color
-    ? { backgroundColor: stage.color }
-    : undefined;
+  const corDaEtapa = stage.color ?? corPadraoDaEtapa(stage.name, stage.is_won, stage.is_lost);
+  const accentStyle: CSSProperties = { backgroundColor: corDaEtapa };
 
   return (
     <div
@@ -180,9 +195,10 @@ export function StageColumn({
           lados), o contorno de cima cobre exatamente a borda da coluna e viaja
           junto com o cabeçalho preso. */}
       <div
-        className="sticky top-0 z-10 -mx-px -mt-px rounded-t-lg border-x border-t border-border bg-background"
+        className="sticky top-0 z-10 -mx-px -mt-px overflow-hidden rounded-t-lg border-x border-t border-border bg-background"
         data-cabecalho-da-etapa
       >
+        <div className="h-1.5 w-full shrink-0" style={accentStyle} />
         <div className="bg-surface-elevated/40 rounded-t-lg">
           <div className="group/etapa flex items-center gap-2 border-b border-border px-3 py-2.5">
             {/* "Selecionar a etapa inteira" é o gesto que faz a ação em lote valer a
@@ -221,7 +237,7 @@ export function StageColumn({
               />
             )}
             <span
-              className={cn("h-2 w-2 rounded-full", !stage.color && "bg-text-muted/40")}
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
               style={accentStyle}
               aria-hidden
             />

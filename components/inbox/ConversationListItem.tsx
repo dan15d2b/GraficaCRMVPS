@@ -274,7 +274,7 @@ export function ConversationListItem({
   return (
     <div
       className={cn(
-        "relative flex w-full items-start border-b border-border/70",
+        "group/linha relative flex w-full items-start border-b border-border/70",
         selecionado && "bg-accent-soft",
       )}
     >
@@ -293,11 +293,11 @@ export function ConversationListItem({
           data-testid={`selecao-em-lote-${conversation.id}`}
           onClick={() => onAlternarSelecao(conversation.id)}
           className={cn(
-            "mt-3 ml-2 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors",
+            "mt-3.5 ml-2.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all",
             "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent",
             selecionado
-              ? "border-accent bg-accent text-accent-foreground"
-              : "border-muted-foreground bg-background hover:bg-surface-elevated",
+              ? "border-accent bg-accent text-accent-foreground opacity-100"
+              : "border-muted-foreground bg-background hover:bg-surface-elevated opacity-0 group-hover/linha:opacity-100 focus:opacity-100",
           )}
         >
           {selecionado && <Check size={12} weight="bold" aria-hidden />}
@@ -308,15 +308,8 @@ export function ConversationListItem({
         data-conversation-id={conversation.id}
         onClick={() => onSelect(conversation.id)}
         className={cn(
-          "group relative flex min-w-0 flex-1 items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-elevated",
+          "group relative flex min-w-0 flex-1 items-start gap-3.5 px-3.5 py-3 text-left transition-colors hover:bg-surface-elevated",
           "focus-visible:outline-hidden focus-visible:bg-surface-elevated",
-          // `accent-soft`, e não um degrau fixo da rampa: os degraus têm o MESMO
-          // hex nos dois temas, e o `accent-50` (quase branco) no escuro deixava o
-          // nome — `text-text`, claro no escuro — branco sobre branco.
-          // Marcada no lote, quem pinta é o wrapper: no escuro o `accent-soft` é
-          // translúcido, e pintar os dois o somava (prévia a 3,2:1). O botão fica
-          // transparente também no hover/foco, senão o cinza do hover cobria só ele
-          // e a linha ficava em dois tons; o foco vira anel, como o da caixa.
           isSelected &&
             (selecionado
               ? "hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
@@ -325,14 +318,10 @@ export function ConversationListItem({
         aria-current={isSelected ? "true" : undefined}
       >
       {isSelected && (
-        <span className="absolute inset-y-0 left-0 w-0.5 bg-accent" aria-hidden />
+        <span className="absolute inset-y-0 left-0 w-1 bg-accent" aria-hidden />
       )}
       <div className="relative shrink-0">
-        <Avatar className="h-10 w-10">
-          {/* Só monta a <img> quando existe arquivo: sem isso o browser pediria
-              a rota para TODO contato da lista e levaria 404 em cada um sem
-              foto — que é a maioria. O AvatarFallback do Radix já cobre o caso
-              de a imagem não carregar, então as iniciais nunca somem. */}
+        <Avatar className="h-11 w-11">
           {c?.avatar_storage_path && !c?.is_anonymized ? (
             <AvatarImage
               src={`/api/v1/contacts/${c.id}/avatar`}
@@ -340,13 +329,13 @@ export function ConversationListItem({
               className="object-cover"
             />
           ) : null}
-          <AvatarFallback className="bg-surface-elevated text-xs font-medium text-text-muted">
+          <AvatarFallback className="bg-surface-elevated text-xs font-semibold text-text-muted">
             {initials(displayName, phoneFallback)}
           </AvatarFallback>
         </Avatar>
         <span
           className={cn(
-            "absolute -bottom-0.5 -left-0.5 h-3 w-3 rounded-full border-2 border-background",
+            "absolute -bottom-0.5 -left-0.5 h-3.5 w-3.5 rounded-full border-2 border-background",
             dot,
           )}
           role="img"
@@ -374,21 +363,13 @@ export function ConversationListItem({
           <span className="flex min-w-0 items-center gap-1.5">
             <span
               className={cn(
-                "truncate text-sm",
-                unread > 0 ? "font-semibold text-text" : "font-medium text-text",
+                "truncate text-[15px] leading-tight",
+                unread > 0 ? "font-bold text-text" : "font-semibold text-text",
                 c?.is_anonymized && "font-normal italic text-text-muted",
               )}
             >
               {displayName}
             </span>
-            {/*
-              A ETIQUETA "GRUPO", ao lado do nome.
-              `conversations.is_group` já chega no SELECT do handler (schema
-              original) — sem este selo, a lista não distingue um grupo de uma
-              conversa individual até abrir a conversa e ver vários remetentes
-              na mesma linha do tempo (ver `MessageBubble`, que mostra QUEM
-              mandou cada mensagem dentro do grupo).
-            */}
             {conversation.is_group && (
               <Badge variant="secondary" className="h-4 shrink-0 px-1.5 text-[10px]">
                 {t("Grupo")}
@@ -396,33 +377,27 @@ export function ConversationListItem({
             )}
           </span>
           <span
-            className="shrink-0 text-[11px] tabular-nums text-text-subtle"
-            // O mesmo lugar da tela mostra duas coisas diferentes conforme a aba:
-            // na Fila é "desde quando o cliente ESPERA" (a mensagem mais antiga sem
-            // resposta — #990), nas outras é "há quanto tempo a conversa mexeu". O
-            // rótulo existe só onde a leitura muda.
+            className="shrink-0 text-xs tabular-nums text-text-subtle font-medium"
             title={naFila ? t("Desde quando o cliente espera resposta") : undefined}
           >
             {time}
           </span>
         </div>
 
-        <div className="mt-0.5 flex items-center justify-between gap-2">
+        <div className="mt-1 flex items-center justify-between gap-2">
           <p
             className={cn(
-              "min-w-0 truncate text-[13px]",
-              // Na aberta, `text-text`: `text-muted` sobre o `accent-soft` do
-              // escuro dá 4,2:1, abaixo do AA (medido em selecionada-legivel-no-escuro.test).
-              unread > 0 || isSelected ? "text-text" : "text-text-muted",
+              "min-w-0 truncate text-sm leading-normal",
+              unread > 0 || isSelected ? "text-text font-medium" : "text-text-muted",
             )}
           >
             {isAi && mostrarAutomatico ? (
-              <Robot size={12} weight="duotone" className="mr-1 inline align-[-2px]" aria-hidden />
+              <Robot size={14} weight="duotone" className="mr-1 inline align-[-2px]" aria-hidden />
             ) : null}
             {truncated}
           </p>
           {unread > 0 && (
-            <span className="inline-flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[10px] font-semibold tabular-nums text-accent-foreground">
+            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-bold tabular-nums text-accent-foreground">
               {unread}
             </span>
           )}

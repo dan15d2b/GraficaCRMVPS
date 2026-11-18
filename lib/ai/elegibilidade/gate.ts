@@ -264,6 +264,8 @@ export function montarEstadoDeElegibilidade(raw: {
   forceHuman: unknown;
   /** `contacts.tags` cru (array de `text[]`), para a régua de contato interno (#2353). */
   contactTags?: readonly string[] | null | undefined;
+  /** `conversations.tags` cru (array de `text[]`), para silenciar IA se a conversa tiver tag excluída. */
+  conversationTags?: readonly string[] | null | undefined;
   /** `organizations.settings` cru; a lista interna mora em `.crm.internal_contact_tags`. */
   orgSettings?: unknown;
   /**
@@ -287,7 +289,10 @@ export function montarEstadoDeElegibilidade(raw: {
     canalDesativado: raw.canalDesativado === true,
     modo,
     forceHuman: raw.forceHuman === true,
-    contatoInterno: ehContatoInterno(raw.contactTags, tagsInternasDaOrg(raw.orgSettings)),
+    contatoInterno: ehContatoInterno(
+      [...(raw.contactTags ?? []), ...(raw.conversationTags ?? [])],
+      tagsInternasDaOrg(raw.orgSettings),
+    ),
     contatoDaEquipe: ehContatoDaEquipe(raw.contactTags, tagsDaEquipeDaOrg(raw.orgSettings)),
     aiOptOut: raw.aiOptOut === true,
     botSilencedUntil: normalizarInstante(raw.botSilencedUntil),

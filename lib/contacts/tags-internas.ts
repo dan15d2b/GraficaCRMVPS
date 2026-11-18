@@ -41,6 +41,30 @@ import { tagsInternasDaOrg } from "@/lib/schemas/settings";
 
 import { normalizarTags } from "./tag-normalizada";
 
+export const TAGS_IGNORADAS_PADRAO = [
+  "fornecedor",
+  "instalador",
+  "parceiro",
+  "equipe",
+  "ignorar_ia",
+  "sem_ia",
+  "nao_responder",
+] as const;
+
+/**
+ * O contato ou a conversa tem alguma etiqueta da lista interna ou ignorada?
+ */
+export function ehContatoOuConversaInterno(
+  tags: readonly string[] | null | undefined,
+  tagsInternas: readonly string[] | null | undefined,
+): boolean {
+  const internas = new Set([
+    ...TAGS_IGNORADAS_PADRAO,
+    ...normalizarTags(tagsInternas ?? []),
+  ]);
+  return normalizarTags(tags ?? []).some((tag) => internas.has(tag));
+}
+
 /**
  * O contato tem alguma etiqueta da lista interna?
  *
@@ -54,51 +78,52 @@ export function ehContatoInterno(
   tagsDoContato: readonly string[] | null | undefined,
   tagsInternas: readonly string[] | null | undefined,
 ): boolean {
-  const internas = new Set(normalizarTags(tagsInternas ?? []));
-  if (internas.size === 0) return false;
-  return normalizarTags(tagsDoContato ?? []).some((tag) => internas.has(tag));
+  return ehContatoOuConversaInterno(tagsDoContato, tagsInternas);
 }
 
 /**
  * A MESMA régua de `ehContatoInterno`, escrita em SQL — para os predicados que
  * decidem o envio ANTES de existir um contato em JS.
- *
- * `isLeadInHandoff` (`lib/agent-engine/agent/human-handoff.ts`) e `readStopFlags`
- * (`lib/agent-engine/guardrails/before-send.ts`) são SQL direto contra `contacts`
- * e NÃO passam pelo gate de elegibilidade — foi por ali que o contato interno
- * continuava recebendo o envio FIXO do follow-up e o modelo aprovado do worker
- * (#2353: a etiqueta entra DEPOIS de o contato nascer e o fluxo de follow-up já
- * o ter inscrito, então o gate de entrada não vê nada).
- *
- * A forma é a de `normalizarTag` — `trim` + minúscula + corte de 40 — aplicada
- * aos DOIS lados: à etiqueta do contato (`contacts.tags`) e à lista da
- * organização (`organizations.settings.crm.internal_contact_tags`). Em SQL,
- * `trim` é `btrim`, minúscula é `lower` e o corte é `left(..., 40)`
- * (`TAMANHO_MAXIMO_DA_TAG`); o valor vazio é descartado dos dois lados, como
- * `normalizarTags` faz. Lista vazia, chave ausente, jsonb torto que não seja
- * array ou organização sem linha: ninguém casa — nenhum contato é interno, o
- * mesmo estado de toda organização que nunca configurou a lista.
- *
- * UMA forma e DOIS chamadores, com a referência do contato como parâmetro: cada
- * consulta já nomeia a tabela do seu jeito (`contacts` cru num lugar, `c` no
- * outro), e a cláusula precisa citar a MESMA linha que o `where` filtrou.
- * `referenciaDoContato` é identificador escrito AQUI, no código — nunca vem de
- * dado de fora.
  */
 export function sqlContatoInterno(referenciaDoContato: string): string {
-  return `exists (
-  select 1
-    from organizations o
-    cross join lateral jsonb_array_elements_text(
-      case when jsonb_typeof(o.settings -> 'crm' -> 'internal_contact_tags') = 'array'
-           then o.settings -> 'crm' -> 'internal_contact_tags'
-           else '[]'::jsonb end
-    ) as interna(valor)
-    cross join lateral unnest(${referenciaDoContato}.tags) as do_contato(etiqueta)
-   where o.id = ${referenciaDoContato}.organization_id
-     and left(lower(btrim(interna.valor)), 40) <> ''
-     and left(lower(btrim(do_contato.etiqueta)), 40) = left(lower(btrim(interna.valor)), 40)
-)`;
+  return `(
+    (${referenciaDoContato}.tags && array['fornecedor', 'instalador', 'parceiro', 'equipe', 'ignorar_ia', 'sem_ia', 'nao_responder']::text[])
+    or exists (
+      select 1
+        from organizations o
+        cross join lateral jsonb_array_elements_text(
+          case when jsonb_typeof(o.settings -> 'crm' -> 'internal_contact_tags') = 'array'
+               then o.settings -> 'crm' -> 'internal_contact_tags'
+               else '[]'::jsonb end
+        ) as interna(valor)
+        cross join lateral unnest(${referenciaDoContato}.tags) as do_contato(etiqueta)
+       where o.id = ${referenciaDoContato}.organization_id
+         and left(lower(btrim(interna.valor)), 40) <> ''
+         and left(lower(btrim(do_contato.etiqueta)), 40) = left(lower(btrim(interna.valor)), 40)
+    )
+  )`;
+}
+
+/**
+ * Cláusula SQL para verificar se a CONVERSA possui tags internas ou ignoradas pela IA.
+ */
+export function sqlConversaInterna(referenciaDaConversa: string): string {
+  return `(
+    (${referenciaDaConversa}.tags && array['fornecedor', 'instalador', 'parceiro', 'equipe', 'ignorar_ia', 'sem_ia', 'nao_responder']::text[])
+    or exists (
+      select 1
+        from organizations o
+        cross join lateral jsonb_array_elements_text(
+          case when jsonb_typeof(o.settings -> 'crm' -> 'internal_contact_tags') = 'array'
+               then o.settings -> 'crm' -> 'internal_contact_tags'
+               else '[]'::jsonb end
+        ) as interna(valor)
+        cross join lateral unnest(${referenciaDaConversa}.tags) as da_conversa(etiqueta)
+       where o.id = ${referenciaDaConversa}.organization_id
+         and left(lower(btrim(interna.valor)), 40) <> ''
+         and left(lower(btrim(da_conversa.etiqueta)), 40) = left(lower(btrim(interna.valor)), 40)
+    )
+  )`;
 }
 
 /**

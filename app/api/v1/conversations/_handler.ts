@@ -22,6 +22,7 @@ import { ORDEM_DA_ESPERA, ehAFila } from "@/lib/inbox/comando-da-conversa";
 import { aplicarMarcadores } from "@/lib/inbox/marcador-da-conversa";
 import { exigirControleDaConversa } from "@/lib/inbox/controle-da-conversa";
 import { sincronizarEtiquetasDaConversaComCanal } from "@/lib/channels/sync-conversa-etiquetas";
+import { sincronizarEtapaDoFunilPorTags } from "@/lib/leads/sincronia-tags-funil";
 
 /**
  * Prepara o termo digitado para viajar dentro de um `or=` do PostgREST.
@@ -709,6 +710,14 @@ export async function patchConversationHandler(
       conv.id,
       conv.organization_id,
       input.tags,
+    );
+    void sincronizarEtapaDoFunilPorTags(
+      supabase as unknown as SupabaseClient,
+      {
+        organizationId: conv.organization_id,
+        conversationId: conv.id,
+        tags: input.tags,
+      },
     );
     await audit({
       action: "conversation.tags_changed",

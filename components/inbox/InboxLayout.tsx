@@ -950,7 +950,10 @@ export function InboxLayout({
           colunas.lista,
         )}
       >
-        <BotaoIniciarConversa />
+        <div className="flex items-center justify-between px-3 pt-3 pb-1">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">{t("Conversas")}</h2>
+          <BotaoIniciarConversa variant="icon" />
+        </div>
         <InboxFilters value={filterValue} onChange={setFilterValue} />
         {podeAgirEmLote && (
           <BarraDeAcoesEmLote

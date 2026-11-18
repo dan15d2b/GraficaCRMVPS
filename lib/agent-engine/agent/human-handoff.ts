@@ -49,7 +49,7 @@ import {
 } from '@/lib/escalacao/passagem';
 import { traduzir } from '@/lib/i18n/dicionario';
 import { normalizarIdioma, type Idioma } from '@/lib/i18n/idiomas';
-import { sqlContatoInterno } from '@/lib/contacts/tags-internas';
+import { sqlContatoInterno, sqlConversaInterna } from '@/lib/contacts/tags-internas';
 import { CONVERSATION_TERMINAL_STATUSES } from '@/lib/schemas';
 import { ehOptOutProvavel } from '@/lib/opt-out/deteccao';
 import { emitAgentActivityForContact } from '@/lib/leads/agent-activity';
@@ -396,7 +396,10 @@ export async function isLeadInHandoff(
            -- silêncio de uma conversa arquivada seguia vetando as outras do
            -- mesmo contato, para sempre ('infinity' não vence nunca).
            and v.status not in (${STATUS_TERMINAIS_EM_SQL})
-           and v.bot_silenced_until is not null and v.bot_silenced_until > now()
+           and (
+             (v.bot_silenced_until is not null and v.bot_silenced_until > now())
+             or ${sqlConversaInterna('v')}
+           )
            ${escopo}
        )
      ) as handoff

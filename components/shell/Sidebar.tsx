@@ -377,10 +377,10 @@ export function SidebarContent({
                             isActive
                               ? "bg-accent text-accent-foreground"
                               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                            collapsed && "justify-center px-2",
+                            collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
                           )}
                         >
-                          <Icon size={18} weight={isActive ? "fill" : "regular"} aria-hidden />
+                          <Icon size={collapsed ? 22 : 18} weight={isActive ? "fill" : "regular"} aria-hidden />
                           {!collapsed && <span className="truncate">{t(item.label)}</span>}
                           {item.healthDot && (
                             <ConnectionHealthDot
@@ -436,10 +436,10 @@ export function SidebarContent({
               pathname.startsWith(rodape.href)
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-              collapsed && "justify-center px-2",
+              collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
             )}
           >
-            <Gear size={18} aria-hidden />
+            <Gear size={collapsed ? 22 : 18} aria-hidden />
             {!collapsed && <span className="truncate">{t(rodape.label)}</span>}
           </Link>
         )}
@@ -459,10 +459,10 @@ export function SidebarContent({
               pathname.startsWith(ajuda.href)
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-              collapsed && "justify-center px-2",
+              collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
             )}
           >
-            <BookOpen size={18} aria-hidden />
+            <BookOpen size={collapsed ? 22 : 18} aria-hidden />
             {!collapsed && <span className="truncate">{t(ajuda.label)}</span>}
           </Link>
         )}

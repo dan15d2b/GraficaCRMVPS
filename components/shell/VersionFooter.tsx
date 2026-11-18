@@ -22,7 +22,7 @@ export function VersionFooter({
 }) {
   const t = useT();
   const { data } = useSystemVersion();
-  if (!data) return null;
+  if (!data || collapsed) return null;
 
   const label = data.current_version.replace(/^v/i, "");
   const personalizada = data.identity?.customized === true;

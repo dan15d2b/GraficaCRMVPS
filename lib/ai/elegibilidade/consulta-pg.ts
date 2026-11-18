@@ -25,6 +25,8 @@ interface LinhaDeElegibilidade {
   org_status: string | null;
   /** `contacts.tags` — a régua de contato interno (#2353) e a da equipe (#3534). */
   contact_tags: string[] | null;
+  /** `conversations.tags` — tags da conversa. */
+  conversation_tags: string[] | null;
   /** `organizations.settings` — as listas moram em `.crm.internal_contact_tags` e `.crm.team_contact_tags`. */
   org_settings: unknown;
 }
@@ -47,6 +49,7 @@ export async function decidirElegibilidadeDaConversa(
        ct.ai_authorized_at          as ai_authorized_at,
        ct.phone_number              as phone_number,
        ct.tags                      as contact_tags,
+       cv.tags                      as conversation_tags,
        o.status                     as org_status,
        o.settings                   as org_settings
      from conversations cv
@@ -70,6 +73,7 @@ export async function decidirElegibilidadeDaConversa(
     contactPhoneNumber: r.phone_number,
     forceHuman: r.force_human,
     contactTags: r.contact_tags,
+    conversationTags: r.conversation_tags,
     orgSettings: r.org_settings,
     aiOptOut: r.ai_opt_out,
     assigneeKind: r.assignee_kind,

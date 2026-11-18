@@ -402,38 +402,30 @@ export function InboxFilters({ value, onChange }: Props) {
 
   return (
     <div className="border-b border-border bg-background">
-      <div className="space-y-2 px-3 pt-3 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="relative min-w-0 flex-1">
-            <MagnifyingGlass
-              size={15}
-              weight="regular"
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-              aria-hidden
-            />
-            {/* "última mensagem", e não "mensagem": a busca alcança apenas
-                `conversations.last_message_preview` — a ÚLTIMA mensagem, truncada em 200
-                caracteres já na ingestão (`grep -rn 'slice(0, 200)' lib/channels/` mostra onde).
-                Medido numa conversa real de 32 mensagens: buscar o que o cliente pediu na
-                3ª devolve ZERO. Alcançar o histórico é projeto próprio (índice trigram +
-                retenção + LGPD); até lá, a tela não promete o que o backend não faz. */}
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t("Buscar por nome, telefone ou última mensagem…")}
-              className="h-9 rounded-full border-transparent bg-surface-elevated pl-9 shadow-none focus-visible:border-border focus-visible:bg-background"
-              aria-label={t("Buscar conversas")}
-            />
-          </div>
-          {/* Botão pressionável em vez de Switch: o filtro vive na mesma linha
-              da busca, e o Switch com rótulo pedia uma linha inteira só para
-              si numa coluna de 280px. */}
+      <div className="space-y-2 px-3 pt-2 pb-2">
+        <div className="relative w-full">
+          <MagnifyingGlass
+            size={15}
+            weight="regular"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
+            aria-hidden
+          />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("Buscar por nome, telefone ou última mensagem…")}
+            className="h-9 w-full rounded-full border-transparent bg-surface-elevated pl-9 shadow-none focus-visible:border-border focus-visible:bg-background"
+            aria-label={t("Buscar conversas")}
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
           <button
             type="button"
             aria-pressed={value.onlyUnread}
             onClick={() => onChange({ ...value, onlyUnread: !value.onlyUnread })}
             className={cn(
-              "h-9 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+              "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
               "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               value.onlyUnread
                 ? "border-accent bg-accent text-accent-foreground"
@@ -442,15 +434,12 @@ export function InboxFilters({ value, onChange }: Props) {
           >
             {t("Não lidos")}
           </button>
-          {/* MESMO PADRÃO do botão acima: filtro auxiliar pressionável, na
-              mesma linha. "Grupos" manda `is_group=true` na listagem — sem ele
-              a aba mostra tudo, individual e grupo misturados, como hoje. */}
           <button
             type="button"
             aria-pressed={value.onlyGroups ?? false}
             onClick={() => onChange({ ...value, onlyGroups: !value.onlyGroups })}
             className={cn(
-              "h-9 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
+              "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
               "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               value.onlyGroups
                 ? "border-accent bg-accent text-accent-foreground"
@@ -459,11 +448,101 @@ export function InboxFilters({ value, onChange }: Props) {
           >
             {t("Grupos")}
           </button>
-        </div>
 
-        {(showChannelSwitch || mostrarSeletorDeTag || mostrarSeletorDeAtendente) && (
-          <div className="flex gap-2">
-            {showChannelSwitch && (
+          {mostrarSeletorDeTag && (
+            <DropdownMenu onOpenChange={(aberto) => {
+              if (!aberto) setBuscaDeEtiqueta("");
+            }}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "h-8 shrink-0 truncate rounded-full border border-border bg-transparent px-3 text-left text-xs font-medium text-text-muted hover:bg-surface-elevated shadow-none",
+                    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    etiquetas.length > 0 && "border-accent bg-accent-soft text-accent font-semibold",
+                  )}
+                  aria-label={t("Filtrar por tag")}
+                >
+                  {etiquetas.length > 0 ? (
+                    <span className="inline-flex items-center gap-1">
+                      <ChipDeEtiqueta tag={etiquetas[0]!} className="h-4 px-1 text-[10px]" />
+                      {etiquetas.length > 1 && (
+                        <span className="tabular-nums text-[10px]">+{etiquetas.length - 1}</span>
+                      )}
+                    </span>
+                  ) : (
+                    t("Todas as tags")
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <div className="px-2 pb-1">
+                  <Input
+                    value={buscaDeEtiqueta}
+                    onChange={(e) => setBuscaDeEtiqueta(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key.length === 1) e.stopPropagation();
+                    }}
+                    placeholder={t("Buscar etiqueta")}
+                    aria-label={t("Buscar etiqueta")}
+                    className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs shadow-none focus-visible:border-border"
+                  />
+                </div>
+                <DropdownMenuItem
+                  onClick={() => onChange({ ...value, tag: undefined, tagMode: undefined })}
+                >
+                  {t("Todas as tags")}
+                </DropdownMenuItem>
+                {etiquetas.length > 1 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup
+                      value={value.tagMode === "ou" ? "ou" : "e"}
+                      onValueChange={(modo) =>
+                        onChange({ ...value, tagMode: modo === "ou" ? "ou" : undefined })
+                      }
+                    >
+                      <DropdownMenuRadioItem value="e">{t("Todas (E)")}</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="ou">
+                        {t("Qualquer uma (OU)")}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                {opcoesVisiveis.map((tag) => (
+                  <DropdownMenuCheckboxItem
+                    key={tag}
+                    checked={etiquetas.includes(tag)}
+                    onCheckedChange={() => alternaEtiqueta(tag)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <PontoDaEtiqueta tag={tag} />
+                      {tag}
+                    </span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {termoDaEtiqueta !== "" && opcoesVisiveis.length === 0 && (
+                  <p className="px-2 py-1.5 text-xs text-text-subtle">
+                    {t("Nenhuma etiqueta com esse texto")}
+                  </p>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {mostrarSeletorDeAtendente && (
+            <div className="shrink-0">
+              <SeletorDeAtendente
+                value={value.assigned_to}
+                onChange={(atendente) => onChange({ ...value, assigned_to: atendente })}
+              />
+            </div>
+          )}
+
+          {showChannelSwitch && (
+            <div className="shrink-0">
               <Select
                 value={value.channel_session_id ?? "all"}
                 onValueChange={(v) =>
@@ -472,7 +551,7 @@ export function InboxFilters({ value, onChange }: Props) {
               >
                 <SelectTrigger
                   className={cn(
-                    "h-8 min-w-0 flex-1 rounded-full border-transparent bg-surface-elevated px-3 text-xs shadow-none",
+                    "h-8 shrink-0 rounded-full border-border bg-transparent px-3 text-xs shadow-none text-text-muted hover:bg-surface-elevated",
                     value.channel_session_id != null && "border-accent bg-accent-soft text-accent",
                   )}
                   aria-label={t("Filtrar por número de WhatsApp")}
@@ -491,153 +570,9 @@ export function InboxFilters({ value, onChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-            )}
-
-            {mostrarSeletorDeTag && (
-              <DropdownMenu onOpenChange={(aberto) => {
-                if (!aberto) setBuscaDeEtiqueta("");
-              }}>
-                {/*
-                  ⚠️ POR QUE ISTO DEIXOU DE SER UM `Select` (#1274).
-                  O `Select` do Radix é de escolha ÚNICA e — o que mata a
-                  multi-seleção — FECHA o menu a cada item escolhido. Para uma
-                  etiqueta só isso era certo; para duas, o operador teria de
-                  reabrir o menu entre a primeira e a segunda, e o custo do
-                  segundo clique é o que faz a feature parecer idiota. O
-                  `DropdownMenuCheckboxItem` marca e NÃO fecha, que é a
-                  diferença entre um filtro de duas etiquetas e um formulário.
-
-                  O gatilho continua com `aria-label="Filtrar por tag"` e a MESMA
-                  aparência de cápsula, porque quem procura este controle no
-                  Inbox (e o teste `inbox-filtro-de-tag-nao-desmonta`, que
-                  vigia a desmontagem) não pode ver o filtro mudar de figura.
-                */}
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "h-8 min-w-0 flex-1 truncate rounded-full border border-transparent bg-surface-elevated px-3 text-left text-xs shadow-none",
-                      "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      etiquetas.length > 0 && "border-accent bg-accent-soft text-accent",
-                    )}
-                    aria-label={t("Filtrar por tag")}
-                  >
-                    {etiquetas.length > 0 ? (
-                      <span className="inline-flex items-center gap-1">
-                        {/* O CHIP da primeira etiqueta + o resto resumido: a coluna
-                            é de 280 px e três chips não cabem. A cor continua sendo
-                            a mesma que a lista mostra ao lado — mesma razão do
-                            `border-accent`, que é o que faz o filtro ativo se
-                            reconhecer de relance. */}
-                        <ChipDeEtiqueta tag={etiquetas[0]!} className="h-5 px-1.5 text-[11px]" />
-                        {etiquetas.length > 1 && (
-                          <span className="tabular-nums text-[11px]">+{etiquetas.length - 1}</span>
-                        )}
-                      </span>
-                    ) : (
-                      t("Todas as tags")
-                    )}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64">
-                  <DropdownMenuLabel>{t("Todas as tags")}</DropdownMenuLabel>
-                  {/*
-                    A BUSCA (#2498): filtra o vocabulário que já está aqui dentro,
-                    sem tocar em `value` — ver o comentário junto de
-                    `opcoesVisiveis`. Ela fica ACIMA dos itens de propósito: o
-                    "Todas as tags" (que limpa o filtro) e o E/OU continuam
-                    alcançáveis mesmo com a lista toda filtrada, que é quando mais
-                    se precisa deles.
-                  */}
-                  <div className="px-2 pb-1">
-                    <Input
-                      value={buscaDeEtiqueta}
-                      onChange={(e) => setBuscaDeEtiqueta(e.target.value)}
-                      onKeyDown={(e) => {
-                        // O typeahead do Radix lê QUALQUER tecla imprimível que
-                        // suba do conteúdo e salta o foco para o item que começa
-                        // com ela — dentro de um campo de texto isso rouba a
-                        // segunda letra. `stopPropagation` só nas caracteres:
-                        // Escape continua subindo e fecha o menu.
-                        if (e.key.length === 1) e.stopPropagation();
-                      }}
-                      placeholder={t("Buscar etiqueta")}
-                      aria-label={t("Buscar etiqueta")}
-                      className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs shadow-none focus-visible:border-border"
-                    />
-                  </div>
-                  <DropdownMenuItem
-                    onClick={() => onChange({ ...value, tag: undefined, tagMode: undefined })}
-                  >
-                    {t("Todas as tags")}
-                  </DropdownMenuItem>
-                  {/*
-                    O E/OU só aparece havendo DUAS etiquetas. Com uma só o parâmetro
-                    não muda o resultado, e um botão que não muda nada é um
-                    controle morto — a mesma razão pela qual o seletor some quando
-                    a organização não tem vocabulário.
-                  */}
-                  {etiquetas.length > 1 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      {/* Rádio, e não item comum: marca o modo ATIVO (e só ele) e
-                          expõe `aria-checked` a quem usa leitor de tela. */}
-                      <DropdownMenuRadioGroup
-                        value={value.tagMode === "ou" ? "ou" : "e"}
-                        onValueChange={(modo) =>
-                          onChange({ ...value, tagMode: modo === "ou" ? "ou" : undefined })
-                        }
-                      >
-                        <DropdownMenuRadioItem value="e">{t("Todas (E)")}</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="ou">
-                          {t("Qualquer uma (OU)")}
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </>
-                  )}
-                  <DropdownMenuSeparator />
-                  {/* As órfãs entram na lista: sem elas o gatilho mostraria o
-                      resumo de um filtro cujas opções não estão mais lá, e o
-                      operador não teria como tirá-las. */}
-                  {opcoesVisiveis.map((tag) => (
-                    <DropdownMenuCheckboxItem
-                      key={tag}
-                      checked={etiquetas.includes(tag)}
-                      onCheckedChange={() => alternaEtiqueta(tag)}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {/* Ponto, não chip: a opção é uma linha de 280 px que já
-                          divide espaço com o filtro de número. O nome continua
-                          sendo o que se lê; a cor só acelera o reconhecimento
-                          de quem já conhece o vocabulário da operação. */}
-                      <span className="inline-flex items-center gap-2">
-                        <PontoDaEtiqueta tag={tag} />
-                        {tag}
-                      </span>
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {/* Dizer que NADA casou é diferente de uma lista vazia: sem
-                      esta linha o operador lê um menu em branco e acha que o
-                      seletor quebrou. Só existe quando há busca — sem termo,
-                      lista vazia é o caso "organização sem etiqueta", que o
-                      seletor nem deveria estar desenhando. */}
-                  {termoDaEtiqueta !== "" && opcoesVisiveis.length === 0 && (
-                    <p className="px-2 py-1.5 text-xs text-text-subtle">
-                      {t("Nenhuma etiqueta com esse texto")}
-                    </p>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {mostrarSeletorDeAtendente && (
-              <SeletorDeAtendente
-                value={value.assigned_to}
-                onChange={(atendente) => onChange({ ...value, assigned_to: atendente })}
-              />
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* As setas aparecem só quando há abas fora da área visível; a faixa e o

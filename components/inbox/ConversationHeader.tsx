@@ -55,6 +55,8 @@ import { rotuloParaAEquipe } from "@/lib/contacts/rotulo-do-contato";
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { useEnderecoDaResposta } from "@/hooks/inbox/useEnderecoDaResposta";
 import { rotuloDoCanalDaConversa } from "@/lib/channels/estado";
+import { ConversaAcoesDoFunil } from "@/components/inbox/ConversaAcoesDoFunil";
+import { ConversaTagsPopover } from "@/components/inbox/ConversaTagsPopover";
 
 interface Props {
   conversation: ConversationWithContact;
@@ -318,38 +320,17 @@ export function ConversationHeader({
           A". `w-full` a põe numa linha própria acima da identidade, sem disputar
           espaço com a barra de ações — a faixa só existe quando o dono é OUTRA
           pessoa (o componente decide; sem carteira ele não desenha nada). */}
-      {c?.id && (
-        <FaixaDaCarteira contactId={c.id} quemAtendeId={conversation.assigned_to_user_id} />
-      )}
       <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
           <ChannelLogo channel={conversation.channel_sessions} size={20} />
           <h2 className="min-w-0 truncate text-sm font-semibold" title={displayName}>{displayName}</h2>
           <Badge variant="outline" className="h-4 shrink-0 px-1.5 text-[10px]">
             {t(STATUS_LABEL[status] ?? status)}
           </Badge>
-          {/* Ao lado do estado, não escondido num painel: a pergunta "dá para
-              escrever agora?" se faz ANTES de digitar, não depois de receber um
-              `failed` com um código de cinco dígitos. */}
           <JanelaSelo
             provider={conversation.channel_sessions?.provider ?? null}
             lastInboundAt={conversation.last_inbound_at}
           />
-          {/* #2383: O CANAL DESTA CONVERSA, NO CABEÇALHO — a acepção que faltava
-              da issue: a lista já dizia por onde a conversa entrou, a conversa
-              ABERTA não dizia. O logo ao lado nomeia o provedor, não o número:
-              com "Peças" e "Vendas" conectados, ele é idêntico nos dois casos.
-
-              O TEXTO é o mesmo da lista e da tela `/app/connections`
-              (`rotuloDoCanalDaConversa` → `nomeDoCanal`): uma segunda cadeia de
-              regras aqui seria como as leituras de "quem manda" divergiram —
-              três telas, um fato, uma fonte.
-
-              `max-w` + `truncate` respondem ao critério de aceite "layout
-              utilizável com nomes de canal maiores": o badge encolhe e o `title`
-              devolve o texto inteiro. Sem canal (grupo, conversa sem sessão,
-              não-WA) não há rótulo nenhum e esta barra fica exatamente como
-              estava — o badge é acréscimo, não substituição. */}
           {rotuloCanal && (
             <Badge
               variant="outline"
@@ -360,6 +341,11 @@ export function ConversationHeader({
               <span className="truncate">{rotuloCanal}</span>
             </Badge>
           )}
+          <ConversaTagsPopover
+            conversationId={conversation.id}
+            orgId={conversation.organization_id}
+            tags={conversation.tags}
+          />
         </div>
 
         {/* QUEM ESTÁ NO COMANDO, com nome e por GEOMETRIA — disco cheio para
@@ -410,6 +396,10 @@ export function ConversationHeader({
           `max-md:` — no computador encolher a janela não é teclado. */}
       <div className="flex min-w-0 flex-col items-end gap-1 max-md:w-full max-md:items-stretch max-md:group-data-[teclado-aberto]/conversa:hidden">
       <div className="flex min-w-0 flex-wrap items-center gap-1.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:pr-8 max-md:[&>*]:shrink-0 max-md:[mask-image:linear-gradient(to_right,black_calc(100%_-_2rem),transparent)]">
+        <ConversaAcoesDoFunil
+          contactId={c?.id ?? null}
+          conversationId={conversation.id}
+        />
         {/* Primeira da barra e sem rótulo escrito: é ferramenta de LEITURA, não
             ação de atendimento, e não muda de lugar com o estado da conversa.
             Só o ícone porque a barra já quebrou a caixa útil em 1280px uma vez

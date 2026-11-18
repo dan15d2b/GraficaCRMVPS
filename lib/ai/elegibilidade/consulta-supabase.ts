@@ -32,6 +32,7 @@ import {
 interface ConversaEmbed {
   bot_silenced_until: string | null;
   assignee_kind: string | null;
+  tags: string[] | null;
   contacts: {
     force_human: boolean | null;
     /** A marca permanente "sempre atendimento humano" (issue 2379). */
@@ -56,7 +57,7 @@ export async function decidirElegibilidadeDaConversaViaSupabase(
   const { data, error } = await admin
     .from("conversations")
     .select(
-      "bot_silenced_until, assignee_kind, organizations:organization_id(status, settings), contacts:contact_id(force_human, ai_opt_out, ai_authorized_at, phone_number, tags), channel_sessions:channel_session_id(metadata)",
+      "bot_silenced_until, assignee_kind, tags, organizations:organization_id(status, settings), contacts:contact_id(force_human, ai_opt_out, ai_authorized_at, phone_number, tags), channel_sessions:channel_session_id(metadata)",
     )
     .eq("organization_id", input.organizationId)
     .eq("id", input.conversationId)
@@ -77,6 +78,7 @@ export async function decidirElegibilidadeDaConversaViaSupabase(
     contactPhoneNumber: row.contacts?.phone_number ?? null,
     forceHuman: row.contacts?.force_human ?? false,
     contactTags: row.contacts?.tags ?? null,
+    conversationTags: row.tags ?? null,
     orgSettings: row.organizations?.settings,
     aiOptOut: row.contacts?.ai_opt_out ?? false,
     assigneeKind: row.assignee_kind,

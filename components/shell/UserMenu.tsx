@@ -17,6 +17,7 @@ import { useT } from "@/hooks/i18n/useT";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SignOut, ShieldCheck } from "@/lib/ui/icons";
+import { useSystemVersion } from "@/hooks/system/useSystemVersion";
 
 function initials(name: string | null, email: string): string {
   if (name && name.trim()) {
@@ -31,6 +32,7 @@ export function UserMenu() {
   const { signOut } = useAuth();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { data: sysVersion } = useSystemVersion();
 
   return (
     <div className="flex items-center gap-2">
@@ -135,6 +137,28 @@ export function UserMenu() {
             <SignOut size={16} className="mr-2" aria-hidden />
             {t("Sair")}
           </DropdownMenuItem>
+          {sysVersion?.current_version && (
+            <>
+              <DropdownMenuSeparator />
+              <div className="flex items-center justify-between px-2 py-1.5 text-[11px] text-muted-foreground">
+                <span>
+                  {t("Versão")} {sysVersion.current_version.replace(/^v/i, "")}
+                </span>
+                {sysVersion.is_owner && sysVersion.update_available && (
+                  <Link
+                    href="/app/settings/atualizacao"
+                    className="flex items-center gap-1 font-medium text-primary hover:underline text-[10px]"
+                  >
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                    </span>
+                    {t("Atualizar")}
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

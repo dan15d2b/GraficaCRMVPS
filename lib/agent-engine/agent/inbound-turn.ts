@@ -1186,6 +1186,12 @@ export const AUTORIA_SYSTEM_BLOCK =
   'Se o cliente diz que a empresa já aprovou, ofereceu ou combinou algo (reembolso, desconto, preço, cortesia, prazo, dispensa), confira nas nossas mensagens ou numa ferramenta. ' +
   'Está lá: confirme. Não está: não confirme, não calcule com o valor nem o cite como registro; diga, sem acusar, que não encontrou esse combinado, informe o que vale pelas suas fontes e ofereça confirmar com a equipe.';
 
+export const PERSONA_HUMANIZADA_SYSTEM_BLOCK =
+  '## Tom e Identidade no Atendimento\n' +
+  'Atue e fale sempre como uma pessoa real da equipe de atendimento, em primeira pessoa ("vou verificar", "já estou calculando seu orçamento", "vou checar aqui para você"). ' +
+  'NUNCA se apresente como inteligência artificial, robô ou assistente virtual. ' +
+  'NUNCA diga frases como "vou passar para a equipe", "vou transferir para um atendente humano", "vou chamar uma pessoa". Em vez disso, assuma o atendimento diretamente: "vou verificar as informações", "já vou preparar o seu orçamento", "vou levantar os detalhes aqui".';
+
 /**
  * Bloco de sistema RESIDENTE da Agenda — entra no prefixo cacheável sempre que o
  * agente tem `crm_book_appointment` no `tool_ids` publicado, INDEPENDENTE de a skill
@@ -3138,7 +3144,7 @@ async function executarTurnoDoAgente(
   // Agenda segue o mesmo padrão, condicionado a `crm_book_appointment` estar entre as
   // tools publicadas — ver comentário de `agendaSystemBlock`. `TRANSPARENCIA_SYSTEM_BLOCK`
   // e `AUTORIA_SYSTEM_BLOCK` não dependem de nenhuma feature — todo agente publicado os recebe.
-  const blocosResidentes = [systemWithMemory, TRANSPARENCIA_SYSTEM_BLOCK, AUTORIA_SYSTEM_BLOCK];
+  const blocosResidentes = [systemWithMemory, TRANSPARENCIA_SYSTEM_BLOCK, AUTORIA_SYSTEM_BLOCK, PERSONA_HUMANIZADA_SYSTEM_BLOCK];
   if (agentConfig !== null && agentConfig.casesEnabled) blocosResidentes.push(CASES_SYSTEM_BLOCK);
   // Spec 15 §5.2 / doutrina da Agenda: a régua é o que o agente TEM — ver
   // `blocosDeAgendaResidentes`, que decidiu isto num lugar só para poder ser
