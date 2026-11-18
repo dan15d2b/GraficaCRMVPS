@@ -440,10 +440,10 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
   const defaultTimezone = organizationTimezone ?? FUSO_PADRAO;
 
   function patchFilters(p: Partial<TriggerValue["filters"]>) {
-    onChange({ ...value, filters: { ...value.filters, ...p } });
+    onChange({ ...value, filters: { ...(value?.filters ?? {}), ...p } });
   }
 
-  const bh = value.filters.business_hours;
+  const bh = value?.filters?.business_hours;
 
   function setBhEnabled(enabled: boolean) {
     patchFilters({
@@ -470,13 +470,15 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
     patchBh({ weekdays: next });
   }
 
+  const safeEvents = Array.isArray(value?.events) ? value.events : ["message"];
+
   return (
     <div className="space-y-4">
       <div>
         <Label>{t("O que faz ele responder")}</Label>
         <div className="mt-1 flex flex-wrap gap-2">
           {(["message"] as const).map((ev) => {
-            const checked = value.events.includes(ev);
+            const checked = safeEvents.includes(ev);
             return (
               <label
                 key={ev}
@@ -490,8 +492,8 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
                     onChange({
                       ...value,
                       events: checked
-                        ? (value.events.filter((e) => e !== ev) as TriggerValue["events"])
-                        : ([...value.events, ev] as TriggerValue["events"]),
+                        ? (safeEvents.filter((e) => e !== ev) as TriggerValue["events"])
+                        : ([...safeEvents, ev] as TriggerValue["events"]),
                     })
                   }
                   disabled={disabled}
@@ -508,7 +510,7 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div className="flex items-center gap-2">
           <Switch
-            checked={value.filters.ignore_groups}
+            checked={value?.filters?.ignore_groups ?? true}
             onCheckedChange={(v) => patchFilters({ ignore_groups: v })}
             disabled={disabled}
             id="ignore_groups"
@@ -517,7 +519,7 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
         </div>
         <div className="flex items-center gap-2">
           <Switch
-            checked={value.filters.ignore_self}
+            checked={value?.filters?.ignore_self ?? true}
             onCheckedChange={(v) => patchFilters({ ignore_self: v })}
             disabled={disabled}
             id="ignore_self"
@@ -530,7 +532,7 @@ export function TriggerEditor({ value, onChange, disabled, organizationTimezone,
         <Label htmlFor="keyword_regex">{t("Só responder quando a mensagem falar de algo específico (opcional)")}</Label>
         <Input
           id="keyword_regex"
-          value={value.filters.keyword_regex ?? ""}
+          value={value?.filters?.keyword_regex ?? ""}
           onChange={(e) =>
             patchFilters({ keyword_regex: e.target.value.trim() === "" ? null : e.target.value })
           }

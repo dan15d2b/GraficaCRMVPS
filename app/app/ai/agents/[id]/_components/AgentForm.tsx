@@ -324,7 +324,16 @@ export function buildState(args: {
       version?.system_prompt ??
       t("Você é um atendente. Responda de forma educada e clara, em pt-BR."),
     tool_ids: version?.tool_ids ?? [],
-    trigger_config: (version?.trigger_config as unknown as TriggerValue) ?? DEFAULT_TRIGGER,
+    trigger_config: {
+      ...DEFAULT_TRIGGER,
+      ...((version?.trigger_config as unknown as TriggerValue) ?? {}),
+      filters: {
+        ...DEFAULT_TRIGGER.filters,
+        ...((version?.trigger_config as unknown as TriggerValue)?.filters ?? {}),
+      },
+      events:
+        (version?.trigger_config as unknown as TriggerValue)?.events ?? DEFAULT_TRIGGER.events,
+    },
     max_steps: version?.max_steps ?? 10,
     token_budget: version?.token_budget ?? 50_000,
     cost_budget_cents: version?.cost_budget_cents ?? 50,
