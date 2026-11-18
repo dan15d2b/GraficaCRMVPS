@@ -155,7 +155,11 @@ export function lerPublicoDoGatilho(triggerConfig: unknown): PublicoDoAgente | n
 }
 
 function chave(tag: string): string {
-  return tag.trim().toLowerCase();
+  return tag
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 /**

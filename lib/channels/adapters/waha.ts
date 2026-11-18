@@ -388,64 +388,17 @@ export const wahaAdapter: ChannelAdapter = {
     return { externalId: parseWahaMessageId(res) };
   },
 
-  async syncChatLabels(input: {
+  async syncChatLabels(_input: {
     sessionRef: string;
     chatId: string;
     tags: string[];
     orgId: string;
   }): Promise<void> {
-    const client = getWahaClient();
-    if (!client) return;
-
-    let targetChatId = input.chatId;
-    if (targetChatId.endsWith("@c.us")) {
-      try {
-        targetChatId = await resolveCanonicalCusChatId(client, input.sessionRef, targetChatId);
-      } catch {
-        // Mantém chatId original em caso de oscilação
-      }
-    }
-
-    const existing = await listarEtiquetasWaha(input.sessionRef, client);
-    const existingMap = new Map(
-      existing.map((l) => [l.name.trim().toLowerCase(), l]),
-    );
-
-    const labelIds: string[] = [];
-    let currentTotal = existing.length;
-
-    for (const tag of input.tags) {
-      const normalized = tag.trim().toLowerCase();
-      if (!normalized) continue;
-      const found = existingMap.get(normalized);
-      if (found) {
-        labelIds.push(found.id);
-      } else if (currentTotal < 20) {
-        try {
-          const created = await criarEtiquetaWaha(
-            input.sessionRef,
-            tag.trim(),
-            hexParaCorWaha(null),
-            client,
-          );
-          labelIds.push(created.id);
-          existingMap.set(normalized, created);
-          currentTotal++;
-        } catch {
-          // Falha macia na criação remota
-        }
-      }
-    }
-
-    await definirEtiquetasDoChatWaha(input.sessionRef, targetChatId, labelIds, client);
-
-    if (targetChatId !== input.chatId) {
-      try {
-        await definirEtiquetasDoChatWaha(input.sessionRef, input.chatId, labelIds, client);
-      } catch {
-        // Ignora se o chatId alternativo não for aceito
-      }
-    }
+    // Intencionalmente no-op: no WAHA NOWEB (Baileys), PUT /chats/:chatId/labels dispara patches
+    // binários de AppStateSync que os servidores da Meta rejeitam como adulteração/incompatibilidade,
+    // desconectando a sessão e deslogando todos os aparelhos conectados no WhatsApp.
+    // A sincronização de etiquetas deve ser estritamente unidirecional (leitura do WhatsApp -> CRM).
+    return;
   },
 
   async listRemoteLabels(input: {

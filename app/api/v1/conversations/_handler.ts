@@ -705,6 +705,13 @@ export async function patchConversationHandler(
     });
   }
   if (input.tags !== undefined) {
+    if (conv.contact_id) {
+      void (supabase as unknown as SupabaseClient)
+        .from("contacts")
+        .update({ tags: input.tags })
+        .eq("id", conv.contact_id)
+        .eq("organization_id", conv.organization_id);
+    }
     void sincronizarEtiquetasDaConversaComCanal(
       supabase as unknown as SupabaseClient,
       conv.id,
