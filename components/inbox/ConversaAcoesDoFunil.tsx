@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useContext } from "react";
+import { useMemo, useContext, useState } from "react";
 import { useQuery, useMutation, useQueryClient, QueryClientContext } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api/client";
@@ -13,7 +13,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CaretDown, CheckCircle, ArrowRight } from "@/lib/ui/icons";
+import { CaretDown, CheckCircle, ArrowRight, Clock, Warning } from "@/lib/ui/icons";
+import { FileText } from "lucide-react";
+import { useProvasDaConversa } from "@/hooks/inbox/useProvas";
+import { ModalEnviarProva } from "@/components/inbox/ModalEnviarProva";
 
 interface StageInfo {
   id: string;
@@ -47,6 +50,10 @@ export function ConversaAcoesDoFunil(props: Props) {
 function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
   const t = useT();
   const qc = useQueryClient();
+  const [modalProvaAberta, setModalProvaAberta] = useState(false);
+
+  const { data: provas } = useProvasDaConversa(conversationId);
+  const provaMaisRecente = provas && provas.length > 0 ? provas[0] : null;
 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["crm-summary", contactId],
@@ -144,65 +151,138 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
     return sugeridas.filter((e) => e.id !== etapaAtualId);
   }, [lead, etapas, etapaAtualNome, etapaAtualId]);
 
-  if (isLoading || !lead) return null;
+  if (isLoading) return null;
 
   return (
-    <div className="flex items-center gap-1.5 max-md:hidden">
-      {etapaAtualNome && (
-        <Badge
-          variant="outline"
-          className="h-7 border-border/80 bg-surface-elevated/60 px-2.5 text-xs font-semibold text-foreground"
-          title={`${t("Etapa atual no Funil:")} ${etapaAtualNome}`}
-        >
-          <span className="max-w-[130px] truncate">{etapaAtualNome}</span>
-        </Badge>
-      )}
-
-      {proximasEtapasSugeridas.map((etapa) => (
-        <Button
-          key={etapa.id}
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={moveMutation.isPending}
-          onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: etapa.id })}
-          className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent-foreground transition-colors disabled:opacity-50"
-          title={`${t("Mover para")} ${etapa.name}`}
-        >
-          <ArrowRight size={12} className="mr-1" aria-hidden />
-          <span className="max-w-[140px] truncate">{etapa.name}</span>
-        </Button>
-      ))}
-
-      {etapas.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+    <>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Botão de Envio de Prova / Selo de Status da Prova */}
+        {provaMaisRecente ? (
+          provaMaisRecente.status === "pendente" ? (
             <Button
               type="button"
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
-              title={t("Mover para outra etapa do funil")}
+              size="sm"
+              variant="outline"
+              onClick={() => setModalProvaAberta(true)}
+              className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-semibold border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors"
+              title={t("Clique para ver ou reenviar a prova digital")}
             >
-              <CaretDown size={13} weight="bold" aria-hidden />
+              <Clock size={12} className="mr-1 text-amber-600" aria-hidden />
+              <span>
+                {t("Prova Pendente")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
+              </span>
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            {etapas
-              .filter((e) => e.id !== etapaAtualId)
-              .map((e) => (
-                <DropdownMenuItem
-                  key={e.id}
-                  onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: e.id })}
-                  className="flex cursor-pointer items-center justify-between text-xs"
-                >
-                  <span className="truncate">{e.name}</span>
-                  {e.is_won && <CheckCircle size={13} className="text-emerald-500 shrink-0 ml-1" />}
-                </DropdownMenuItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+          ) : provaMaisRecente.status === "aprovada" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setModalProvaAberta(true)}
+              className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-semibold border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors"
+              title={t("Arte aprovada pelo cliente. Clique para enviar nova prova se necessário.")}
+            >
+              <CheckCircle size={12} className="mr-1 text-emerald-600" aria-hidden />
+              <span>
+                {t("Arte Aprovada")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
+              </span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setModalProvaAberta(true)}
+              className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-semibold border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-colors"
+              title={t("Cliente solicitou ajuste na arte. Clique para enviar nova versão.")}
+            >
+              <Warning size={12} className="mr-1 text-rose-600" aria-hidden />
+              <span>
+                {t("Ajuste Solicitado")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
+              </span>
+            </Button>
+          )
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setModalProvaAberta(true)}
+            className="h-7 cursor-pointer rounded-md px-2 text-xs font-medium text-slate-700 bg-surface-elevated/70 hover:bg-muted border-border transition-colors"
+            title={t("Enviar prova digital (arte/layout) para aprovação formal do cliente")}
+          >
+            <FileText className="mr-1 size-3 text-blue-600" aria-hidden />
+            <span>{t("Prova Digital")}</span>
+          </Button>
+        )}
+
+        {/* Etapas do Funil */}
+        {lead && (
+          <div className="flex items-center gap-1.5 max-md:hidden">
+            {etapaAtualNome && (
+              <Badge
+                variant="outline"
+                className="h-7 border-border/80 bg-surface-elevated/60 px-2.5 text-xs font-semibold text-foreground"
+                title={`${t("Etapa atual no Funil:")} ${etapaAtualNome}`}
+              >
+                <span className="max-w-[130px] truncate">{etapaAtualNome}</span>
+              </Badge>
+            )}
+
+            {proximasEtapasSugeridas.map((etapa) => (
+              <Button
+                key={etapa.id}
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={moveMutation.isPending}
+                onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: etapa.id })}
+                className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent-foreground transition-colors disabled:opacity-50"
+                title={`${t("Mover para")} ${etapa.name}`}
+              >
+                <ArrowRight size={12} className="mr-1" aria-hidden />
+                <span className="max-w-[140px] truncate">{etapa.name}</span>
+              </Button>
+            ))}
+
+            {etapas.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+                    title={t("Mover para outra etapa do funil")}
+                  >
+                    <CaretDown size={13} weight="bold" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {etapas
+                    .filter((e) => e.id !== etapaAtualId)
+                    .map((e) => (
+                      <DropdownMenuItem
+                        key={e.id}
+                        onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: e.id })}
+                        className="flex cursor-pointer items-center justify-between text-xs"
+                      >
+                        <span className="truncate">{e.name}</span>
+                        {e.is_won && <CheckCircle size={13} className="text-emerald-500 shrink-0 ml-1" />}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        )}
+      </div>
+
+      <ModalEnviarProva
+        open={modalProvaAberta}
+        onOpenChange={setModalProvaAberta}
+        conversationId={conversationId}
+        contactId={contactId}
+      />
+    </>
   );
 }

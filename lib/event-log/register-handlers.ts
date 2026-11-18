@@ -16,6 +16,7 @@ import { lgpdRedactHandler } from "@/workers/lgpd-redact-worker.handler";
 import { automationRulesHandler } from "@/lib/automation/engine.handler";
 import { followupReactivityHandler } from "@/lib/followup/reactivity.handler";
 import { campanhaRespostaHandler } from "@/lib/campanhas/resposta.handler";
+import { provaRespostaHandler } from "@/lib/provas/resposta.handler";
 import { followupGatilhoEtapaHandler } from "@/lib/followup/gatilho-etapa.handler";
 import { followupSaidaDaEtapaHandler } from "@/lib/followup/saida-da-etapa.handler";
 import { followupGatilhoLeadHandler } from "@/lib/followup/gatilho-lead.handler";
@@ -52,6 +53,8 @@ export function ensureHandlersRegistered(): void {
   // LLM, pelo mesmo motivo dela — é escrita curta no banco, sem rede de
   // terceiro, e não pode ficar atrás de um consumidor que pode estourar.
   registerHandler(campanhaRespostaHandler);
+  // Resposta de aprovação de prova digital (WhatsApp): detecta "Aprovado" do cliente
+  registerHandler(provaRespostaHandler);
   // Mesmo critério: o gatilho do cliente que volta é escrita curta no banco e
   // precisa rodar antes do LLM. Depois da reatividade, para o match_reply dos
   // fluxos já vivos ler a mensagem primeiro.

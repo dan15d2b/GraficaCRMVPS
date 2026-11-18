@@ -36,6 +36,9 @@ export const PUBLIC_PATHS: RegExp[] = [
   // acima — vem de outro site, o cookie Strict não viaja, e a rota é só a ponte
   // para um destino FIXO (`app/cobranca/volta/route.ts`), sem efeito.
   /^\/cobranca\/volta$/,
+  // Prova digital de arte gráfica: cliente visualiza e aprova/rejeita sem login
+  /^\/prova\/[A-Za-z0-9_-]+$/,
+  /^\/api\/v1\/prova\/[A-Za-z0-9_-]+(\/.*)?$/,
   /^\/403$/,
   /^\/admin\/forbidden$/,
   /^\/404$/,

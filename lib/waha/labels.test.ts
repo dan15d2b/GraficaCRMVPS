@@ -8,8 +8,8 @@ import {
   type WahaLabel,
 } from "./labels";
 
-describe("mapeamento de cores entre Deskcomm e WhatsApp", () => {
-  it("converte hex do Deskcomm para índice do WhatsApp", () => {
+describe("mapeamento de cores entre CRM e WhatsApp", () => {
+  it("converte hex do CRM para índice do WhatsApp", () => {
     expect(hexParaCorWaha("#0091ff")).toBe(1); // Azul
     expect(hexParaCorWaha("#ffe629")).toBe(2); // Amarelo
     expect(hexParaCorWaha("#ffb224")).toBe(3); // Âmbar
@@ -20,7 +20,7 @@ describe("mapeamento de cores entre Deskcomm e WhatsApp", () => {
     expect(hexParaCorWaha("#ab4aba")).toBe(19); // Roxo
   });
 
-  it("converte índice do WhatsApp para hex do Deskcomm", () => {
+  it("converte índice do WhatsApp para hex do CRM", () => {
     expect(corWahaParaHex(1)).toBe("#0091ff");
     expect(corWahaParaHex(2)).toBe("#ffe629");
     expect(corWahaParaHex(3)).toBe("#ffb224");
