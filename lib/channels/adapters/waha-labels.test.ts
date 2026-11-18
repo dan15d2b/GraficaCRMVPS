@@ -27,15 +27,7 @@ describe("wahaAdapter - gestão de etiquetas", () => {
     expect(typeof wahaAdapter.getChatsByRemoteLabel).toBe("function");
   });
 
-  it("syncChatLabels associa etiquetas existentes e cria novas caso faltem", async () => {
-    vi.mocked(labelsApi.listarEtiquetasWaha).mockResolvedValue([
-      { id: "10", name: "pedido em andamento" },
-    ]);
-    vi.mocked(labelsApi.criarEtiquetaWaha).mockResolvedValue({
-      id: "11",
-      name: "Tirar medidas",
-    });
-
+  it("syncChatLabels é no-op para garantir sincronia 100% unidirecional (WhatsApp -> CRM)", async () => {
     await wahaAdapter.syncChatLabels!({
       sessionRef,
       chatId,
@@ -43,36 +35,8 @@ describe("wahaAdapter - gestão de etiquetas", () => {
       orgId,
     });
 
-    expect(labelsApi.listarEtiquetasWaha).toHaveBeenCalledWith(sessionRef);
-    expect(labelsApi.criarEtiquetaWaha).toHaveBeenCalledWith(sessionRef, "Tirar medidas", 18);
-    expect(labelsApi.definirEtiquetasDoChatWaha).toHaveBeenCalledWith(
-      sessionRef,
-      chatId,
-      ["10", "11"],
-    );
-  });
-
-  it("syncChatLabels respeita o limite de 20 etiquetas no WhatsApp", async () => {
-    // 20 labels já existentes
-    const existing = Array.from({ length: 20 }, (_, i) => ({
-      id: String(i + 1),
-      name: `tag_${i + 1}`,
-    }));
-    vi.mocked(labelsApi.listarEtiquetasWaha).mockResolvedValue(existing);
-
-    // Tentar adicionar tag nova quando já atingiu 20
-    await wahaAdapter.syncChatLabels!({
-      sessionRef,
-      chatId,
-      tags: ["tag_1", "tag_nova_21"],
-      orgId,
-    });
-
+    // Na arquitetura 100% unidirecional, nenhuma mutação remota é enviada ao WhatsApp
     expect(labelsApi.criarEtiquetaWaha).not.toHaveBeenCalled();
-    expect(labelsApi.definirEtiquetasDoChatWaha).toHaveBeenCalledWith(
-      sessionRef,
-      chatId,
-      ["1"],
-    );
+    expect(labelsApi.definirEtiquetasDoChatWaha).not.toHaveBeenCalled();
   });
 });

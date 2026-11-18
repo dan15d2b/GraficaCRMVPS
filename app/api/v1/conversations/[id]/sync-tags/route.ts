@@ -5,13 +5,11 @@ import { z } from "zod";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdapter } from "@/lib/channels";
 import {
   CHANNEL_SESSION_REF_COLUMNS,
   resolveSessionRef,
   type ChannelSessionRef,
 } from "@/lib/channels/session-ref";
-import type { ProviderDeMensagem } from "@/lib/channels/types";
 import { getWahaClient } from "@/lib/waha/client";
 import { obterEtiquetasDoChatWaha, listarEtiquetasWaha } from "@/lib/waha/labels";
 import { sincronizarEtapaDoFunilPorTags } from "@/lib/leads/sincronia-tags-funil";
@@ -141,38 +139,18 @@ export async function POST(_req: NextRequest, ctx: RouteCtx): Promise<Response> 
     // As etiquetas do WhatsApp são a fonte autoritativa: reflete fielmente o WhatsApp
     const finalTags = remoteTags.length > 0 ? remoteTags : currentTags;
 
-    // Atualiza conversa no banco com as tags sincronizadas do WhatsApp
+    // Atualiza conversa no banco com as tags sincronizadas do WhatsApp (100% Unidirecional WhatsApp -> CRM)
     await admin
       .from("conversations")
       .update({ tags: finalTags, updated_at: new Date().toISOString() })
       .eq("id", conv.id);
 
-    // Se houver tags do CRM que ainda não estão no WhatsApp, sincroniza de volta
-    const adapter = getAdapter(session.provider as ProviderDeMensagem);
-    if (adapter && adapter.syncChatLabels && finalTags.length > 0) {
-      const chatId = adapter.resolveRecipient({
-        isGroup: false,
-        groupChatId: null,
-        phoneNumber: contact?.phone_number,
-        waIdentity: contact?.wa_identity,
-        waLid: contact?.wa_lid,
-      });
-
-      if (chatId) {
-        try {
-          await adapter.syncChatLabels({
-            sessionRef,
-            chatId,
-            tags: finalTags,
-            orgId,
-          });
-        } catch (syncErr) {
-          logger.warn("[sync-tags] falha ao enviar tags atualizadas para canal", {
-            conversation_id: conv.id,
-            error: syncErr instanceof Error ? syncErr.message : String(syncErr),
-          });
-        }
-      }
+    // Atualiza também o contato para garantir paridade completa no CRM
+    if (contact?.id) {
+      await admin
+        .from("contacts")
+        .update({ tags: finalTags })
+        .eq("id", contact.id);
     }
 
     // Sincroniza etapa do funil automaticamente

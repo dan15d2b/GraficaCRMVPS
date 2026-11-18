@@ -18,7 +18,7 @@ describe("sincronizarEtiquetasDaConversaComCanal", () => {
     vi.clearAllMocks();
   });
 
-  it("chama syncChatLabels do adapter com sessionRef e chatId resolvidos", async () => {
+  it("é 100% unidirecional (WhatsApp -> CRM): resolve sem mutar canal remoto", async () => {
     const mockSync = vi.fn().mockResolvedValue(undefined);
     vi.mocked(channelsIndex.getAdapter).mockReturnValue({
       provider: "waha",
@@ -30,31 +30,7 @@ describe("sincronizarEtiquetasDaConversaComCanal", () => {
     });
 
     const mockSupabase = {
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              maybeSingle: vi.fn().mockResolvedValue({
-                data: {
-                  id: convId,
-                  is_group: false,
-                  group_chat_id: null,
-                  channel: "whatsapp",
-                  contacts: { phone_number: "+556199999999", wa_identity: null, wa_lid: null },
-                  channel_sessions: {
-                    provider: "waha",
-                    waha_session_name: "test_session",
-                    meta_phone_number_id: null,
-                    zernio_account_id: null,
-                    datafy_phone_number_id: null,
-                  },
-                },
-                error: null,
-              }),
-            }),
-          }),
-        }),
-      }),
+      from: vi.fn(),
     };
 
     await sincronizarEtiquetasDaConversaComCanal(
@@ -64,12 +40,8 @@ describe("sincronizarEtiquetasDaConversaComCanal", () => {
       ["pedido em andamento"],
     );
 
-    expect(mockSync).toHaveBeenCalledWith({
-      sessionRef: "test_session",
-      chatId: "556199999999@s.whatsapp.net",
-      tags: ["pedido em andamento"],
-      orgId,
-    });
+    // Na arquitetura 100% unidirecional, o CRM não dispara mutação remota de etiquetas
+    expect(mockSync).not.toHaveBeenCalled();
   });
 
   it("não lança erro se o canal falhar ou não tiver suporte a etiquetas", async () => {

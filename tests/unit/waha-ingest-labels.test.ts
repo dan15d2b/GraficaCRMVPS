@@ -55,6 +55,9 @@ describe("handleLabelChatAssociation - ingestão de webhooks de etiqueta", () =>
                 eq: vi.fn().mockReturnValue(contactQuery),
               }),
             }),
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
           };
         }
         if (table === "conversations") {
@@ -131,6 +134,9 @@ describe("handleLabelChatAssociation - ingestão de webhooks de etiqueta", () =>
                 eq: vi.fn().mockReturnValue(contactQuery),
               }),
             }),
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
           };
         }
         if (table === "conversations") {
@@ -204,6 +210,9 @@ describe("handleLabelChatAssociation - ingestão de webhooks de etiqueta", () =>
                 in: vi.fn().mockReturnValue(contactQuery),
                 eq: vi.fn().mockReturnValue(contactQuery),
               }),
+            }),
+            update: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
             }),
           };
         }

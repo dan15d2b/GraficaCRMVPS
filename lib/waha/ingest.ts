@@ -2536,6 +2536,13 @@ export async function handleLabelChatAssociation(
       .update({ tags: nextTags, updated_at: new Date().toISOString() })
       .eq("id", conv.id);
 
+    if (contatoId) {
+      await (admin as unknown as SupabaseClient)
+        .from("contacts")
+        .update({ tags: nextTags })
+        .eq("id", contatoId);
+    }
+
     // Sincroniza etapa do funil do CRM com as tags do WhatsApp em tempo real
     void sincronizarEtapaDoFunilPorTags(admin as unknown as SupabaseClient, {
       organizationId: session.organization_id,
