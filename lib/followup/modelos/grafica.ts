@@ -134,7 +134,6 @@ export const MODELOS_DE_GRAFICA: readonly ModeloDeFollowup[] = [
       notaDeResposta: O_ATENDIMENTO_ASSUME,
       toques: [
         {
-          esperaAntesMs: 5 * 60_000,
           rotulo: "Aviso de retirada imediata",
           texto:
             "Olá! Boas notícias: o seu pedido já está finalizado, conferido e pronto para retirada em nosso balcão! Você já pode vir buscar durante nosso horário de atendimento. Qualquer dúvida estamos à disposição!",
