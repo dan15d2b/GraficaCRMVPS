@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useParseOrcamento, useAplicarOrcamento } from "@/hooks/inbox/useOrcamentoParser";
 import { calcularDataEntregaDiasUteis } from "@/lib/orcamentos/dias-uteis";
-import { gerarMensagemDoOrcamento } from "@/lib/orcamentos/parser";
+import { gerarMensagemDoOrcamento } from "@/lib/orcamentos/formatador";
 import type { OrcamentoExtraido } from "@/lib/orcamentos/tipos";
 import {
   UploadCloud,
