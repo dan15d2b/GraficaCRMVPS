@@ -17,7 +17,7 @@ import {
   useConversationTagVocabulary,
 } from "@/hooks/inbox/useConversationTags";
 import { useDefinirCorDaEtiqueta } from "@/hooks/tags/useDefinirCorDaEtiqueta";
-import { sugestoesDeEtiqueta, etiquetaParaGravar, opcaoDeCriar } from "@/lib/contacts/etiquetas";
+import { sugestoesDeEtiqueta, etiquetaExistentePara } from "@/lib/contacts/etiquetas";
 
 interface Props {
   conversationId: string;
@@ -73,18 +73,12 @@ export function ConversationTagsEditor({
     mutation.mutate({ conversation_id: conversationId, tags: next });
   }
 
-  /** Grava a etiqueta com o tom escolhido. Devolve a tag gravada, ou `null` se recusada (duplicada/cheia). */
+  /** Aplica a etiqueta existente (originada do WhatsApp). */
   function criar(raw: string, escolhida: string | null): string | null {
-    // #3180 — o que se digita NÃO vira variante de uma etiqueta que já existe:
-    // quando o texto casa pela chave larga (sem caixa, sem acento), é a grafia
-    // EXISTENTE que se grava. É o mesmo caminho da ficha do contato
-    // (`etiquetaParaGravar`), e é ele que faz o Enter aplicar a etiqueta em vez
-    // de criar mais uma.
-    const tag = etiquetaParaGravar({ conhecidas, selecionadas: tags, digitado: raw });
-    if (!tag || tags.length >= 20) return null;
+    // Apenas etiquetas já conhecidas (sincronizadas do WhatsApp) podem ser aplicadas
+    const tag = etiquetaExistentePara(conhecidas, raw);
+    if (!tag || tags.includes(tag) || tags.length >= 20) return null;
     apply([...tags, tag]);
-    // A cor é VOCABULÁRIO, não da linha (#2718): chamada independente do
-    // attach — a SQL faz append do verbete, e falhar aqui não desfaz a tag.
     if (escolhida) void definirCor(tag, escolhida);
     return tag;
   }
@@ -112,9 +106,6 @@ export function ConversationTagsEditor({
     digitado: draft,
   });
 
-  // #3180 (critério 3) — a etiqueta NOVA, a ÚLTIMA opção da lista e só quando
-  // o texto não casa com nenhuma existente: `null` = não há o que criar.
-  const nova = opcaoDeCriar({ conhecidas, selecionadas: tags, digitado: draft });
 
   return (
     <section>
@@ -178,11 +169,11 @@ export function ConversationTagsEditor({
               add(draft);
             }
           }}
-          placeholder={t("Nova tag…")}
+          placeholder={t("Buscar etiqueta do WhatsApp…")}
           maxLength={40}
           disabled={mutation.isPending || tags.length >= 20}
           className="h-7 text-xs"
-          aria-label={t("Adicionar tag à conversa")}
+          aria-label={t("Buscar etiqueta do WhatsApp")}
         />
         <SeletorDeCorDaEtiqueta
           cor={cor}
@@ -203,14 +194,12 @@ export function ConversationTagsEditor({
       </div>
 
       {vocabularyError && <p role="alert" className="text-xs text-destructive">{t("Não foi possível carregar as tags.")}</p>}
-      {(suggestions.length > 0 || nova !== null) && (
+      {suggestions.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {suggestions.map((tag) => (
             <button
               key={tag}
               type="button"
-              // #2789 — passa pela caixa de diálogo para escolher a cor antes de
-              // enviar; sem permissão o clique continua direto (a rota recusaria).
               onClick={() =>
                 podeDefinirCor
                   ? setSugestao({ tag, corInicial: cores[chaveDaEtiqueta(tag)] ?? null })
@@ -223,21 +212,12 @@ export function ConversationTagsEditor({
               + {tag}
             </button>
           ))}
-          {/* #3180 (critério 3) — CRIAR fica por ÚLTIMO e só quando o texto não
-              casa com nenhuma etiqueta existente: assim a lista diz, sem
-              ambiguidade, o que já existe e o que nasceria. Clicar (ou o Enter
-              no campo, que passa pelo mesmo caminho) grava. */}
-          {nova !== null && (
-            <button
-              type="button"
-              onClick={() => add(draft)}
-              disabled={mutation.isPending || tags.length >= 20}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:border-solid hover:text-foreground disabled:opacity-50"
-            >
-              {t("Criar")} «{nova}»
-            </button>
-          )}
         </div>
+      )}
+      {draft.trim() && suggestions.length === 0 && (
+        <p className="mt-1 text-[11px] text-text-subtle italic">
+          {t("Apenas etiquetas criadas no WhatsApp podem ser usadas.")}
+        </p>
       )}
 
       {/* Montado só com a sugestão escolhida: cada abertura nasce com o tom do

@@ -54,6 +54,33 @@ export async function POST(_req: NextRequest): Promise<Response> {
       let labels: Array<{ id: string; name: string }>;
       try {
         labels = await listarEtiquetasWaha(sessionRef, wahaClient);
+        if (Array.isArray(labels) && labels.length > 0) {
+          const validas = labels
+            .filter((l) => l.name && !["não lidas", "favoritos", "grupos"].includes(l.name.trim().toLowerCase()))
+            .map((l) => ({
+              tag: l.name.trim().toLowerCase(),
+              cor: (l as { colorHex?: string }).colorHex || null,
+            }));
+          const nomes = validas.map((l) => l.tag);
+          const { data: orgData } = await admin
+            .from("organizations")
+            .select("settings")
+            .eq("id", orgId)
+            .maybeSingle();
+          if (orgData) {
+            const currentSettings = (orgData.settings as Record<string, unknown>) || {};
+            await admin
+              .from("organizations")
+              .update({
+                settings: {
+                  ...currentSettings,
+                  tags: validas,
+                  canonical_conversation_tags: nomes,
+                },
+              })
+              .eq("id", orgId);
+          }
+        }
       } catch (err) {
         logger.warn("[sync-labels] falha ao listar etiquetas da sessão", {
           sessionRef,

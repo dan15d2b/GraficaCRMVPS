@@ -13,7 +13,7 @@ import {
 } from "@/lib/channels/session-ref";
 import type { ProviderDeMensagem } from "@/lib/channels/types";
 import { getWahaClient } from "@/lib/waha/client";
-import { obterEtiquetasDoChatWaha } from "@/lib/waha/labels";
+import { obterEtiquetasDoChatWaha, listarEtiquetasWaha } from "@/lib/waha/labels";
 import { sincronizarEtapaDoFunilPorTags } from "@/lib/leads/sincronia-tags-funil";
 import { logger } from "@/lib/logger";
 
@@ -77,6 +77,42 @@ export async function POST(_req: NextRequest, ctx: RouteCtx): Promise<Response> 
     const remoteTags: string[] = [];
 
     if (session.provider === "waha" && wahaClient) {
+      // 1. Atualiza vocabulário global da organização com todas as etiquetas do WhatsApp
+      try {
+        const todasLabels = await listarEtiquetasWaha(sessionRef, wahaClient);
+        if (Array.isArray(todasLabels) && todasLabels.length > 0) {
+          const validas = todasLabels
+            .filter((l) => l.name && !["não lidas", "favoritos", "grupos"].includes(l.name.trim().toLowerCase()))
+            .map((l) => ({
+              tag: l.name.trim().toLowerCase(),
+              cor: (l as { colorHex?: string }).colorHex || null,
+            }));
+          const nomes = validas.map((l) => l.tag);
+          const { data: orgData } = await admin
+            .from("organizations")
+            .select("settings")
+            .eq("id", orgId)
+            .maybeSingle();
+          if (orgData) {
+            const currentSettings = (orgData.settings as Record<string, unknown>) || {};
+            await admin
+              .from("organizations")
+              .update({
+                settings: {
+                  ...currentSettings,
+                  tags: validas,
+                  canonical_conversation_tags: nomes,
+                },
+              })
+              .eq("id", orgId);
+          }
+        }
+      } catch (labelErr) {
+        logger.warn("[sync-tags] falha ao atualizar vocabulário geral de tags", {
+          error: labelErr instanceof Error ? labelErr.message : String(labelErr),
+        });
+      }
+
       const chatIdsToCheck: string[] = [];
       if (contact?.wa_lid) {
         chatIdsToCheck.push(`${contact.wa_lid}@lid`);
@@ -102,17 +138,18 @@ export async function POST(_req: NextRequest, ctx: RouteCtx): Promise<Response> 
     }
 
     const currentTags = Array.isArray(conv.tags) ? conv.tags : [];
-    const mergedTags = [...new Set([...currentTags, ...remoteTags])];
+    // As etiquetas do WhatsApp são a fonte autoritativa: reflete fielmente o WhatsApp
+    const finalTags = remoteTags.length > 0 ? remoteTags : currentTags;
 
-    // Atualiza conversa no banco com as tags mescladas
+    // Atualiza conversa no banco com as tags sincronizadas do WhatsApp
     await admin
       .from("conversations")
-      .update({ tags: mergedTags, updated_at: new Date().toISOString() })
+      .update({ tags: finalTags, updated_at: new Date().toISOString() })
       .eq("id", conv.id);
 
     // Se houver tags do CRM que ainda não estão no WhatsApp, sincroniza de volta
     const adapter = getAdapter(session.provider as ProviderDeMensagem);
-    if (adapter && adapter.syncChatLabels) {
+    if (adapter && adapter.syncChatLabels && finalTags.length > 0) {
       const chatId = adapter.resolveRecipient({
         isGroup: false,
         groupChatId: null,
@@ -126,7 +163,7 @@ export async function POST(_req: NextRequest, ctx: RouteCtx): Promise<Response> 
           await adapter.syncChatLabels({
             sessionRef,
             chatId,
-            tags: mergedTags,
+            tags: finalTags,
             orgId,
           });
         } catch (syncErr) {
@@ -142,12 +179,12 @@ export async function POST(_req: NextRequest, ctx: RouteCtx): Promise<Response> 
     void sincronizarEtapaDoFunilPorTags(admin as never, {
       organizationId: orgId,
       conversationId: conv.id,
-      tags: mergedTags,
+      tags: finalTags,
     });
 
     return ok(
       {
-        tags: mergedTags,
+        tags: finalTags,
         remote_tags: remoteTags,
         synced: true,
       },
