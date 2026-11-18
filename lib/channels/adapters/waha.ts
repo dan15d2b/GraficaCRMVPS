@@ -394,7 +394,19 @@ export const wahaAdapter: ChannelAdapter = {
     tags: string[];
     orgId: string;
   }): Promise<void> {
-    const existing = await listarEtiquetasWaha(input.sessionRef);
+    const client = getWahaClient();
+    if (!client) return;
+
+    let targetChatId = input.chatId;
+    if (targetChatId.endsWith("@c.us")) {
+      try {
+        targetChatId = await resolveCanonicalCusChatId(client, input.sessionRef, targetChatId);
+      } catch {
+        // Mantém chatId original em caso de oscilação
+      }
+    }
+
+    const existing = await listarEtiquetasWaha(input.sessionRef, client);
     const existingMap = new Map(
       existing.map((l) => [l.name.trim().toLowerCase(), l]),
     );
@@ -414,6 +426,7 @@ export const wahaAdapter: ChannelAdapter = {
             input.sessionRef,
             tag.trim(),
             hexParaCorWaha(null),
+            client,
           );
           labelIds.push(created.id);
           existingMap.set(normalized, created);
@@ -424,7 +437,15 @@ export const wahaAdapter: ChannelAdapter = {
       }
     }
 
-    await definirEtiquetasDoChatWaha(input.sessionRef, input.chatId, labelIds);
+    await definirEtiquetasDoChatWaha(input.sessionRef, targetChatId, labelIds, client);
+
+    if (targetChatId !== input.chatId) {
+      try {
+        await definirEtiquetasDoChatWaha(input.sessionRef, input.chatId, labelIds, client);
+      } catch {
+        // Ignora se o chatId alternativo não for aceito
+      }
+    }
   },
 
   async listRemoteLabels(input: {

@@ -52,13 +52,16 @@ export async function sincronizarEtiquetasDaConversaComCanal(
     if (conv.is_group) return;
 
     if (!conv.channel_sessions) return;
-    const session = conv.channel_sessions as unknown as ChannelSessionRef;
-    const sessionRef = resolveSessionRef(session);
+    const rawSession = conv.channel_sessions;
+    const session = (Array.isArray(rawSession) ? rawSession[0] : rawSession) as unknown as ChannelSessionRef;
+    if (!session || !session.provider) return;
 
+    const sessionRef = resolveSessionRef(session);
     const adapter = getAdapter(session.provider as ProviderDeMensagem);
     if (!adapter || !adapter.syncChatLabels) return;
 
-    const contact = conv.contacts as ContatoInfo | null;
+    const rawContact = conv.contacts;
+    const contact = (Array.isArray(rawContact) ? rawContact[0] : rawContact) as ContatoInfo | null;
     const chatId = adapter.resolveRecipient({
       isGroup: false,
       groupChatId: null,

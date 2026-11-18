@@ -35,15 +35,24 @@ describe("handleLabelChatAssociation - ingestão de webhooks de etiqueta", () =>
     const mockAdmin = {
       from: vi.fn((table: string) => {
         if (table === "contacts") {
+          const contactQuery = {
+            limit: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: "contact_1" },
+                error: null,
+              }),
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: "contact_1" },
+              error: null,
+            }),
+          };
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                or: vi.fn().mockReturnValue({
-                  maybeSingle: vi.fn().mockResolvedValue({
-                    data: { id: "contact_1" },
-                    error: null,
-                  }),
-                }),
+                or: vi.fn().mockReturnValue(contactQuery),
+                in: vi.fn().mockReturnValue(contactQuery),
+                eq: vi.fn().mockReturnValue(contactQuery),
               }),
             }),
           };
@@ -102,15 +111,24 @@ describe("handleLabelChatAssociation - ingestão de webhooks de etiqueta", () =>
     const mockAdmin = {
       from: vi.fn((table: string) => {
         if (table === "contacts") {
+          const contactQuery = {
+            limit: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: "contact_1" },
+                error: null,
+              }),
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: "contact_1" },
+              error: null,
+            }),
+          };
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                or: vi.fn().mockReturnValue({
-                  maybeSingle: vi.fn().mockResolvedValue({
-                    data: { id: "contact_1" },
-                    error: null,
-                  }),
-                }),
+                or: vi.fn().mockReturnValue(contactQuery),
+                in: vi.fn().mockReturnValue(contactQuery),
+                eq: vi.fn().mockReturnValue(contactQuery),
               }),
             }),
           };
@@ -167,15 +185,24 @@ describe("handleLabelChatAssociation - ingestão de webhooks de etiqueta", () =>
     const mockAdmin = {
       from: vi.fn((table: string) => {
         if (table === "contacts") {
+          const contactQuery = {
+            limit: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({
+                data: { id: "contact_1" },
+                error: null,
+              }),
+            }),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { id: "contact_1" },
+              error: null,
+            }),
+          };
           return {
             select: vi.fn().mockReturnValue({
               eq: vi.fn().mockReturnValue({
-                or: vi.fn().mockReturnValue({
-                  maybeSingle: vi.fn().mockResolvedValue({
-                    data: { id: "contact_1" },
-                    error: null,
-                  }),
-                }),
+                or: vi.fn().mockReturnValue(contactQuery),
+                in: vi.fn().mockReturnValue(contactQuery),
+                eq: vi.fn().mockReturnValue(contactQuery),
               }),
             }),
           };

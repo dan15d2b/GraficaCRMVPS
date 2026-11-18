@@ -48,6 +48,7 @@ import { emitirFalhaDeEntrega, telefoneDoEmbed, type EmbedDoContato } from "@/li
 import type { WahaEnvelope, WahaPayload } from "@/lib/waha/envelope";
 import { bareWaMessageId, chatIdFromWaMessageId, wahaEchoExternalIds } from "@/lib/waha/message-id";
 import { listarEtiquetasWaha } from "@/lib/waha/labels";
+import { sincronizarEtapaDoFunilPorTags } from "@/lib/leads/sincronia-tags-funil";
 import { logger } from "@/lib/logger";
 import { numeroJaAquecido } from "@/lib/ai/pacing-knobs";
 import { nomeDeArquivoLimpo } from "@/lib/messaging/media/nome-de-arquivo";
@@ -2435,36 +2436,80 @@ export async function handleLabelChatAssociation(
   const rawDigits = chatId.replace(/@.*$/, "").replace(/^\+/, "");
   const ehLid = chatId.endsWith("@lid");
 
-  let filtroContato: string;
+  let contatoId: string | null = null;
+
   if (ehLid) {
-    filtroContato = `wa_lid.eq.${rawDigits},wa_identity.eq.lid:${rawDigits}`;
+    const { data: cLid } = await (admin as unknown as SupabaseClient)
+      .from("contacts")
+      .select("id")
+      .eq("organization_id", session.organization_id)
+      .or(`wa_lid.eq.${rawDigits},wa_identity.eq.lid:${rawDigits}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (cLid) {
+      contatoId = cLid.id;
+    } else if (session.waha_session_name) {
+      // Se não achou pelo LID diretamente, resolve o telefone pelo WAHA
+      try {
+        const client = getWahaClient();
+        if (client) {
+          const resolvedPhone = await client.resolvePhoneForLid(session.waha_session_name, rawDigits);
+          if (resolvedPhone) {
+            const canonPhone = canonicalPhoneBR(resolvedPhone);
+            const { data: cPhone } = await (admin as unknown as SupabaseClient)
+              .from("contacts")
+              .select("id")
+              .eq("organization_id", session.organization_id)
+              .eq("phone_number", canonPhone)
+              .limit(1)
+              .maybeSingle();
+
+            if (cPhone) {
+              contatoId = cPhone.id;
+              // Salva o wa_lid no contato para que futuras consultas sejam imediatas
+              await (admin as unknown as SupabaseClient)
+                .from("contacts")
+                .update({ wa_lid: rawDigits })
+                .eq("id", cPhone.id);
+            }
+          }
+        }
+      } catch {
+        // Falha macia na resolução remota de LID
+      }
+    }
   } else {
     const variantes = phoneLookupVariants(rawDigits);
-    const parts: string[] = [];
-    for (const v of variantes) {
-      const d = v.replace(/\D/g, "");
-      parts.push(`phone_number.eq.${v}`);
-      parts.push(`phone_number.eq.${d}`);
-      parts.push(`wa_identity.eq.phone:${v}`);
-      parts.push(`wa_identity.eq.phone:${d}`);
+    const phonesToTry = [
+      ...variantes,
+      ...variantes.map((v) => v.replace(/\D/g, "")),
+      `+${rawDigits}`,
+      rawDigits,
+    ];
+    const uniquePhones = [...new Set(phonesToTry)];
+
+    const { data: cPhone } = await (admin as unknown as SupabaseClient)
+      .from("contacts")
+      .select("id")
+      .eq("organization_id", session.organization_id)
+      .in("phone_number", uniquePhones)
+      .limit(1)
+      .maybeSingle();
+
+    if (cPhone) {
+      contatoId = cPhone.id;
     }
-    filtroContato = parts.length > 0 ? parts.join(",") : `phone_number.eq.+${rawDigits}`;
   }
 
-  const queryContato = (admin as unknown as SupabaseClient)
-    .from("contacts")
-    .select("id")
-    .eq("organization_id", session.organization_id);
-
-  const { data: contato } = await queryContato.or(filtroContato).maybeSingle();
-  if (!contato) return;
+  if (!contatoId) return;
 
   // 3. Localizar a conversa correspondente
   const { data: conv } = await (admin as unknown as SupabaseClient)
     .from("conversations")
     .select("id, tags")
     .eq("organization_id", session.organization_id)
-    .eq("contact_id", contato.id)
+    .eq("contact_id", contatoId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -2473,21 +2518,30 @@ export async function handleLabelChatAssociation(
 
   const currentTags: string[] = Array.isArray(conv.tags) ? conv.tags : [];
   const event = envelope.event;
+  let nextTags: string[] | null = null;
 
   if (event === "label.chat.added") {
-    if (currentTags.includes(tagNormalizada)) return; // Anti-loop
-    const nextTags = [...currentTags, tagNormalizada];
-    await (admin as unknown as SupabaseClient)
-      .from("conversations")
-      .update({ tags: nextTags })
-      .eq("id", conv.id);
+    if (!currentTags.includes(tagNormalizada)) {
+      nextTags = [...currentTags, tagNormalizada];
+    }
   } else if (event === "label.chat.deleted") {
-    if (!currentTags.includes(tagNormalizada)) return; // Anti-loop
-    const nextTags = currentTags.filter((t) => t !== tagNormalizada);
+    if (currentTags.includes(tagNormalizada)) {
+      nextTags = currentTags.filter((t) => t !== tagNormalizada);
+    }
+  }
+
+  if (nextTags !== null) {
     await (admin as unknown as SupabaseClient)
       .from("conversations")
-      .update({ tags: nextTags })
+      .update({ tags: nextTags, updated_at: new Date().toISOString() })
       .eq("id", conv.id);
+
+    // Sincroniza etapa do funil do CRM com as tags do WhatsApp em tempo real
+    void sincronizarEtapaDoFunilPorTags(admin as unknown as SupabaseClient, {
+      organizationId: session.organization_id,
+      conversationId: conv.id,
+      tags: nextTags,
+    });
   }
 }
 

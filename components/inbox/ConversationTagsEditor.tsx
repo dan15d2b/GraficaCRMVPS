@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/auth/AuthProvider";
 import { ROLE_RANK } from "@/lib/auth/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Plus } from "@/lib/ui/icons";
+import { X, Plus, ArrowsClockwise } from "@/lib/ui/icons";
 import {
   useUpdateConversationTags,
   useConversationTagVocabulary,
@@ -23,10 +23,18 @@ interface Props {
   conversationId: string;
   orgId: string;
   tags: string[];
+  onSync?: () => void;
+  syncing?: boolean;
 }
 
 /** G3-05: aplica/remove tags de atendimento na conversa, com sugestão canônica. */
-export function ConversationTagsEditor({ conversationId, orgId, tags }: Props) {
+export function ConversationTagsEditor({
+  conversationId,
+  orgId,
+  tags,
+  onSync,
+  syncing = false,
+}: Props) {
   const t = useT();
   const [draft, setDraft] = useState("");
   // Issue #2718 — tom escolhido ANTES do "+": a etiqueta nasce colorida.
@@ -140,7 +148,23 @@ export function ConversationTagsEditor({ conversationId, orgId, tags }: Props) {
             </Fragment>
           ))
         ) : (
-          <span className="text-xs text-muted-foreground">{t("Sem tags.")}</span>
+          <div className="flex w-full items-center justify-between py-1">
+            <span className="text-xs text-muted-foreground">{t("Sem tags.")}</span>
+            {onSync && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onSync}
+                disabled={syncing}
+                className="h-6 gap-1 px-2 text-[11px] text-text-muted hover:text-foreground"
+                title={t("Puxar etiquetas já existentes no WhatsApp")}
+              >
+                <ArrowsClockwise size={11} className={syncing ? "animate-spin text-primary" : ""} />
+                <span>{syncing ? t("Buscando...") : t("Puxar do WhatsApp")}</span>
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
