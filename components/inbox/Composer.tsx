@@ -441,7 +441,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+    ta.style.height = `${Math.max(85, Math.min(ta.scrollHeight, 220))}px`;
   }
 
   /**
@@ -1100,41 +1100,75 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             </p>
           </div>
         )}
-        <div className="mb-1.5 flex gap-1">
-          <button
-            type="button"
-            onClick={() => setMode("reply")}
-            className={cn(
-              "min-h-11 rounded-full px-3 py-1 text-xs font-medium transition-colors lg:min-h-0 lg:px-2.5",
-              mode === "reply"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-muted",
+        {/* Barra superior de opções do compositor ("as opções você sobe") */}
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setMode("reply")}
+              className={cn(
+                "min-h-8 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                mode === "reply"
+                  ? "bg-accent text-accent-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {t("Responder")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("note")}
+              className={cn(
+                "min-h-8 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                mode === "note"
+                  ? "bg-warning text-warning-fg shadow-xs font-semibold"
+                  : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {t("Nota interna")}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <AttachMenu
+              disabled={respostaBarrada}
+              onPick={escolherArquivo}
+              onPickContact={mode === "reply" ? () => setContactPickerOpen(true) : undefined}
+            />
+            <EmojiButton
+              disabled={isDisabled}
+              onPick={(emoji) => {
+                const ta = taRef.current;
+                if (!ta) {
+                  setText((t) => t + emoji);
+                  return;
+                }
+                const start = ta.selectionStart ?? text.length;
+                const end = ta.selectionEnd ?? text.length;
+                const next = text.slice(0, start) + emoji + text.slice(end);
+                setText(next);
+                setMencoes((atual) => podarMencoesDaEdicao(text, next, atual));
+                requestAnimationFrame(() => {
+                  ta.focus();
+                  ta.selectionStart = ta.selectionEnd = start + emoji.length;
+                  autoresize();
+                });
+              }}
+            />
+            {mode === "reply" && !sugestao && (
+              <DraftReplyButton
+                conversationId={conversationId}
+                disabled={isDisabled}
+                onDraft={() => {
+                  void invalidar();
+                }}
+              />
             )}
-          >
-            {t("Responder")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("note")}
-            className={cn(
-              "min-h-11 rounded-full px-3 py-1 text-xs font-medium transition-colors lg:min-h-0 lg:px-2.5",
-              mode === "note"
-                ? "bg-warning text-warning-fg"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {t("Nota interna")}
-          </button>
+          </div>
         </div>
+
         {/*
           A FAIXA DA CITAÇÃO — o que o atendente escolheu responder.
-
-          Fica ACIMA do campo, como no WhatsApp, e não dentro dele: o texto
-          citado pode ter várias linhas, e empurrá-lo para dentro do campo faria
-          o que se digita disputar espaço com o que se cita.
-
-          `line-clamp-2` porque o objetivo é reconhecer qual mensagem é, não
-          relê-la — ela está logo acima, no fio.
         */}
         {respondendo && mode === "reply" && (
           <div className="mb-1 flex items-start gap-2 rounded-md border-l-2 border-primary bg-muted/60 px-2 py-1.5">
@@ -1152,16 +1186,13 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
               type="button"
               onClick={onCancelarResposta}
               aria-label={t("Cancelar resposta")}
-              className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:size-auto lg:p-0.5"
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="size-4" />
             </button>
           </div>
         )}
-        {/* A BARRA DE RECURSOS (#2833) — um botão por título cadastrado. O clique
-            NÃO envia: entrega o recurso ao MESMO `applyTemplate` que o `/` usa.
-            Texto cai no campo editável; mídia (imagem OU áudio) entra na fila de
-            anexos, com prévia e legenda — não há barra de anexo própria. */}
+        {/* A BARRA DE RECURSOS (#2833) */}
         {mode === "reply" && (
           <BarraDeRecursos
             recursos={templates.data ?? []}
@@ -1179,64 +1210,6 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
           />
         )}
         <div className="flex items-end gap-2">
-          {/* O "+" existe nos DOIS modos desde a F3 da #1863: em "Nota interna"
-              ele abre o mesmo menu, com as DUAS primeiras opções — foto/vídeo e
-              documento — porque a nota passou a aceitar anexo. A terceira
-              (Contato) some: cartão de contato é `type: "contact"`, uma MENSAGEM
-              para o cliente, e nota com cartão de contato não existe. O `disabled`
-              continua o de sempre: em modo nota `respostaBarrada` é só
-              `isDisabled`, e a janela fechada barra a resposta, não a nota. */}
-          <AttachMenu
-            disabled={respostaBarrada}
-            onPick={escolherArquivo}
-            onPickContact={mode === "reply" ? () => setContactPickerOpen(true) : undefined}
-          />
-          <EmojiButton
-            disabled={isDisabled}
-            onPick={(emoji) => {
-              const ta = taRef.current;
-              if (!ta) {
-                setText((t) => t + emoji);
-                return;
-              }
-              const start = ta.selectionStart ?? text.length;
-              const end = ta.selectionEnd ?? text.length;
-              const next = text.slice(0, start) + emoji + text.slice(end);
-              setText(next);
-              // O emoji entra no meio do texto e desloca o que está à direita
-              // dele — as menções andam junto (#2463).
-              setMencoes((atual) => podarMencoesDaEdicao(text, next, atual));
-              requestAnimationFrame(() => {
-                ta.focus();
-                ta.selectionStart = ta.selectionEnd = start + emoji.length;
-                autoresize();
-              });
-            }}
-          />
-          {/*
-            O BOTÃO DE ÍCONE DA ASSISTÊNCIA (issue #3027) — "Sugerir resposta",
-            o mesmo gesto do bloco, no lugar onde ele NÃO custa faixa nenhuma:
-            junto do "+" e do emoji, na linha do campo.
-
-            Os dois nunca aparecem juntos: com sugestão montada, o bloco traz o
-            próprio botão de texto; sem sugestão, fica só este ícone. Ninguém
-            escolhe entre dois botões iguais.
-
-            O clique gera pelo MESMO `POST /conversations/:id/draft-reply` do
-            bloco; o rascunho criado entra pelo `invalidateQueries` da chave
-            compartilhada, e é isso que monta o bloco com o texto e as ações. O
-            texto NÃO é despejado no campo: quem revisa e decide é o bloco, e ter
-            o mesmo texto nos dois lugares diria duas vezes a mesma coisa.
-          */}
-          {mode === "reply" && !sugestao && (
-            <DraftReplyButton
-              conversationId={conversationId}
-              disabled={isDisabled}
-              onDraft={() => {
-                void invalidar();
-              }}
-            />
-          )}
           <textarea
             ref={taRef}
             value={text}
@@ -1245,39 +1218,14 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
               const pos = e.target.selectionStart ?? e.target.value.length;
               setCaret(pos);
               setMencaoIndice(0);
-              // A escolha que sumiu do texto sai da lista AGORA (#2463): com
-              // duas pessoas de mesmo rótulo, a escolha apagada roubava o
-              // `@Nome` da próxima e a nota notificava quem não foi mencionado.
-              // A régua é a posição guardada em cada escolha, não a presença do
-              // rótulo — "apagar a primeira de duas `@Ana Lima`" deixa a lista
-              // com a SEGUNDA, e é a ela que o aviso vai.
-              //
-              // Só na edição À MÃO, de propósito: o envio limpa o campo sem
-              // passar por aqui, e é isso que mantém as menções valendo para o
-              // retry depois de uma falha. Quem digita DURANTE o envio poda as
-              // escolhas aqui — o `onError` da nota devolve as que foram enviadas.
               setMencoes((atual) => podarMencoesDaEdicao(text, e.target.value, atual));
-              // Sumiu o `@` (apagou, ou o Enter escolheu): o Esc de uma vez
-              // não pode travar a lista da PRÓXIMA menção.
               if (!resolverMencao(e.target.value, pos)) setMencaoDispensada(false);
               autoresize();
             }}
-            // Seta e clique movem o cursor sem digitar: sem isto o `caret`
-            // ficaria parado no fim e a lista abriria onde o texto não está.
             onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
             onKeyDown={onKeyDown}
             onPaste={onPaste}
-            rows={1}
-            // O atalho saiu do placeholder e foi para o diálogo de atalhos (`?`)
-            // e para o `title` aqui. Dois motivos, nesta ordem: ele some assim
-            // que se digita a primeira letra — isto é, some justamente quando
-            // você ia quebrar linha —; e, com a coluna do inbox mais estreita
-            // depois do conserto do layout, a frase quebrava em duas linhas
-            // dentro de um campo de uma linha só.
-            //
-            // "(só o time vê)" FICA: não é atalho, é consequência. Quem escreve
-            // uma nota interna precisa saber que ela não vai para o cliente, e
-            // essa informação não pode depender de abrir um diálogo.
+            rows={3}
             placeholder={
               mode === "note"
                 ? t("Escreva uma nota interna… (só o time vê)")
@@ -1289,29 +1237,28 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 : t("Enter envia · Shift+Enter quebra linha")
             }
             className={cn(
-              // 16px abaixo do `md`: o Safari do iPhone AMPLIA a página ao focar
-              // campo com fonte menor, e a conversa sai do quadro. 44px de alvo
-              // até o `lg`, como o resto dos botões de toque.
-              "max-h-40 min-h-11 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm lg:min-h-9",
+              "min-h-11 md:min-h-[85px] max-h-56 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm",
               "placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-hidden",
             )}
             disabled={mode === "note" ? isDisabled : respostaBarrada}
             aria-label={t("Mensagem")}
           />
-          {text.trim() || mode === "note" ? (
-            <Button
-              type="button"
-              size="icon"
-              className="shrink-0"
-              onClick={handleSubmit}
-              disabled={(mode === "note" ? isDisabled : envioBarrado) || !text.trim()}
-              aria-label={t("Enviar")}
-            >
-              <PaperPlaneTilt size={16} weight="fill" aria-hidden />
-            </Button>
-          ) : (
-            active && <AudioRecorder conversationId={conversationId} disabled={respostaBarrada} />
-          )}
+          <div className="shrink-0 mb-0.5">
+            {text.trim() || mode === "note" ? (
+              <Button
+                type="button"
+                size="icon"
+                className="shrink-0"
+                onClick={handleSubmit}
+                disabled={(mode === "note" ? isDisabled : envioBarrado) || !text.trim()}
+                aria-label={t("Enviar")}
+              >
+                <PaperPlaneTilt size={16} weight="fill" aria-hidden />
+              </Button>
+            ) : (
+              active && <AudioRecorder conversationId={conversationId} disabled={respostaBarrada} />
+            )}
+          </div>
         </div>
       </div>
       <AttachmentPreviewDialog

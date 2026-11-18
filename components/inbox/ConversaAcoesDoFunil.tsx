@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useContext } from "react";
+import { useQuery, useMutation, useQueryClient, QueryClientContext } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api/client";
 import { useT } from "@/hooks/i18n/useT";
@@ -38,7 +38,13 @@ interface Props {
   conversationId: string;
 }
 
-export function ConversaAcoesDoFunil({ contactId }: Props) {
+export function ConversaAcoesDoFunil(props: Props) {
+  const qc = useContext(QueryClientContext);
+  if (!qc) return null;
+  return <ConversaAcoesDoFunilInner {...props} />;
+}
+
+function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
   const t = useT();
   const qc = useQueryClient();
 
@@ -66,8 +72,10 @@ export function ConversaAcoesDoFunil({ contactId }: Props) {
 
   const moveMutation = useMutation({
     mutationFn: async ({ leadId, nextStageId }: { leadId: string; nextStageId: string }) => {
-      await apiClient.patch(`/api/v1/leads/${leadId}`, {
-        stage_id: nextStageId,
+      await apiClient.post("/api/v1/leads/bulk", {
+        action: "move",
+        lead_ids: [leadId],
+        params: { stage_id: nextStageId },
       });
     },
     onSuccess: (_, vars) => {
@@ -77,9 +85,13 @@ export function ConversaAcoesDoFunil({ contactId }: Props) {
       );
       void qc.invalidateQueries({ queryKey: ["crm-summary", contactId] });
       void qc.invalidateQueries({ queryKey: ["board"] });
+      void qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      void qc.invalidateQueries({ queryKey: ["crm-side-panel"] });
     },
-    onError: () => {
-      toast.error(t("Não foi possível mover o lead no funil."));
+    onError: (err: any) => {
+      console.error("[ConversaAcoesDoFunil] Falha ao mover lead:", err);
+      const msg = err?.message || err?.details?.message || t("Não foi possível mover o lead no funil.");
+      toast.error(msg);
     },
   });
 
@@ -154,7 +166,7 @@ export function ConversaAcoesDoFunil({ contactId }: Props) {
           variant="secondary"
           disabled={moveMutation.isPending}
           onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: etapa.id })}
-          className="h-7 rounded-md px-2.5 text-xs font-medium bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent-foreground transition-colors"
+          className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent-foreground transition-colors disabled:opacity-50"
           title={`${t("Mover para")} ${etapa.name}`}
         >
           <ArrowRight size={12} className="mr-1" aria-hidden />
@@ -169,7 +181,7 @@ export function ConversaAcoesDoFunil({ contactId }: Props) {
               type="button"
               size="icon"
               variant="ghost"
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
               title={t("Mover para outra etapa do funil")}
             >
               <CaretDown size={13} weight="bold" aria-hidden />
@@ -182,7 +194,7 @@ export function ConversaAcoesDoFunil({ contactId }: Props) {
                 <DropdownMenuItem
                   key={e.id}
                   onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: e.id })}
-                  className="flex items-center justify-between text-xs"
+                  className="flex cursor-pointer items-center justify-between text-xs"
                 >
                   <span className="truncate">{e.name}</span>
                   {e.is_won && <CheckCircle size={13} className="text-emerald-500 shrink-0 ml-1" />}

@@ -402,208 +402,12 @@ export function InboxFilters({ value, onChange }: Props) {
 
   return (
     <div className="border-b border-border bg-background">
-      <div className="space-y-2 px-3 pt-2 pb-2">
-        <div className="relative w-full">
-          <MagnifyingGlass
-            size={15}
-            weight="regular"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle"
-            aria-hidden
-          />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t("Buscar por nome, telefone ou última mensagem…")}
-            className="h-9 w-full rounded-full border-transparent bg-surface-elevated pl-9 shadow-none focus-visible:border-border focus-visible:bg-background"
-            aria-label={t("Buscar conversas")}
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-          <button
-            type="button"
-            aria-pressed={value.onlyUnread}
-            onClick={() => onChange({ ...value, onlyUnread: !value.onlyUnread })}
-            className={cn(
-              "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
-              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              value.onlyUnread
-                ? "border-accent bg-accent text-accent-foreground"
-                : "border-border bg-transparent text-text-muted hover:bg-surface-elevated",
-            )}
-          >
-            {t("Não lidos")}
-          </button>
-          <button
-            type="button"
-            aria-pressed={value.onlyGroups ?? false}
-            onClick={() => onChange({ ...value, onlyGroups: !value.onlyGroups })}
-            className={cn(
-              "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors",
-              "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              value.onlyGroups
-                ? "border-accent bg-accent text-accent-foreground"
-                : "border-border bg-transparent text-text-muted hover:bg-surface-elevated",
-            )}
-          >
-            {t("Grupos")}
-          </button>
-
-          {mostrarSeletorDeTag && (
-            <DropdownMenu onOpenChange={(aberto) => {
-              if (!aberto) setBuscaDeEtiqueta("");
-            }}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "h-8 shrink-0 truncate rounded-full border border-border bg-transparent px-3 text-left text-xs font-medium text-text-muted hover:bg-surface-elevated shadow-none",
-                    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    etiquetas.length > 0 && "border-accent bg-accent-soft text-accent font-semibold",
-                  )}
-                  aria-label={t("Filtrar por tag")}
-                >
-                  {etiquetas.length > 0 ? (
-                    <span className="inline-flex items-center gap-1">
-                      <ChipDeEtiqueta tag={etiquetas[0]!} className="h-4 px-1 text-[10px]" />
-                      {etiquetas.length > 1 && (
-                        <span className="tabular-nums text-[10px]">+{etiquetas.length - 1}</span>
-                      )}
-                    </span>
-                  ) : (
-                    t("Todas as tags")
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
-                <div className="px-2 pb-1">
-                  <Input
-                    value={buscaDeEtiqueta}
-                    onChange={(e) => setBuscaDeEtiqueta(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key.length === 1) e.stopPropagation();
-                    }}
-                    placeholder={t("Buscar etiqueta")}
-                    aria-label={t("Buscar etiqueta")}
-                    className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs shadow-none focus-visible:border-border"
-                  />
-                </div>
-                <DropdownMenuItem
-                  onClick={() => onChange({ ...value, tag: undefined, tagMode: undefined })}
-                >
-                  {t("Todas as tags")}
-                </DropdownMenuItem>
-                {etiquetas.length > 1 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioGroup
-                      value={value.tagMode === "ou" ? "ou" : "e"}
-                      onValueChange={(modo) =>
-                        onChange({ ...value, tagMode: modo === "ou" ? "ou" : undefined })
-                      }
-                    >
-                      <DropdownMenuRadioItem value="e">{t("Todas (E)")}</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="ou">
-                        {t("Qualquer uma (OU)")}
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                {opcoesVisiveis.map((tag) => (
-                  <DropdownMenuCheckboxItem
-                    key={tag}
-                    checked={etiquetas.includes(tag)}
-                    onCheckedChange={() => alternaEtiqueta(tag)}
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <PontoDaEtiqueta tag={tag} />
-                      {tag}
-                    </span>
-                  </DropdownMenuCheckboxItem>
-                ))}
-                {termoDaEtiqueta !== "" && opcoesVisiveis.length === 0 && (
-                  <p className="px-2 py-1.5 text-xs text-text-subtle">
-                    {t("Nenhuma etiqueta com esse texto")}
-                  </p>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          {mostrarSeletorDeAtendente && (
-            <div className="shrink-0">
-              <SeletorDeAtendente
-                value={value.assigned_to}
-                onChange={(atendente) => onChange({ ...value, assigned_to: atendente })}
-              />
-            </div>
-          )}
-
-          {showChannelSwitch && (
-            <div className="shrink-0">
-              <Select
-                value={value.channel_session_id ?? "all"}
-                onValueChange={(v) =>
-                  onChange({ ...value, channel_session_id: v === "all" ? undefined : v })
-                }
-              >
-                <SelectTrigger
-                  className={cn(
-                    "h-8 shrink-0 rounded-full border-border bg-transparent px-3 text-xs shadow-none text-text-muted hover:bg-surface-elevated",
-                    value.channel_session_id != null && "border-accent bg-accent-soft text-accent",
-                  )}
-                  aria-label={t("Filtrar por número de WhatsApp")}
-                >
-                  <SelectValue placeholder={t("Todos os números")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("Todos os números")}</SelectItem>
-                  {filtroForaDaLista && value.channel_session_id != null && (
-                    <SelectItem value={value.channel_session_id}>{t("Número removido")}</SelectItem>
-                  )}
-                  {channels?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {channelLabel(c)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* As setas aparecem só quando há abas fora da área visível; a faixa e o
-          sublinhado continuam com a altura compacta do Inbox.
-
-          `flex-wrap` + `gap-x-1` (#2745) — A FAIXA QUEBRA EM VEZ DE ESCONDER.
-          Medido em browser real, com o CSS do produto compilado e a fonte
-          verdadeira (`tests/sonda-abas-inbox-1280.test.tsx`), as seis abas
-          somam 358px de rótulo+contagem e 378px com o gap de 4px; a coluna da
-          lista vale de 240 (mínimo do arraste, `LIMITES_LISTA`) a 520px, e o
-          padrão da faixa `xl` — a janela de 1280px da issue — é 272px. Sem
-          quebra, o `overflow-x-auto` rolava 191px na coluna de 272 e 13px na
-          de 450: "Fechadas" cortada e "Arquivadas" escondida atrás da seta,
-          que era exatamente o corte medido. Agora, na mesma medição: 2 linhas
-          (68px) em 272, 1 linha (30px) em 450, e as seis dentro da coluna em
-          toda a faixa — rolagem zero.
-
-          `shrink-0` + `whitespace-nowrap` seguem valendo: rótulo não encolhe
-          nem parte no meio. O `gap-x-1` só aperta onde não há folga (com
-          `justify-between` a sobra continua distribuída, então a faixa larga
-          não muda de figura) — e é o que leva 272px de 3 linhas para 2. A
-          seta de rolagem fica sendo o que sempre foi: reserva para o caso em
-          que UMA aba sozinha não cabe (zoom alto, coluna arrastada no mínimo).
-
-          Só o LAYOUT mudou: `value.tab`, `onChange`, `visibleInboxTabs` e
-          `countFor` estão byte a byte como estavam — a aba continua o mesmo
-          filtro com o mesmo rótulo, e "Automático" continua "Automático". */}
+          sublinhado continuam com a altura compacta do Inbox. */}
       <Tabs
         value={value.tab}
         onValueChange={(v) => onChange(comAba(value, v as InboxTab))}
-        className="px-3"
+        className="px-3 pt-1"
       >
         <div className="flex items-center gap-1">
           {moreTabs.left ? (
@@ -654,6 +458,180 @@ export function InboxFilters({ value, onChange }: Props) {
           )}
         </div>
       </Tabs>
+
+      <div className="flex items-center gap-1.5 overflow-x-auto px-3 pt-1.5 pb-1 no-scrollbar">
+        <button
+          type="button"
+          aria-pressed={value.onlyUnread}
+          onClick={() => onChange({ ...value, onlyUnread: !value.onlyUnread })}
+          className={cn(
+            "h-7 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors",
+            "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            value.onlyUnread
+              ? "border-accent bg-accent text-accent-foreground"
+              : "border-border bg-transparent text-text-muted hover:bg-surface-elevated",
+          )}
+        >
+          {t("Não lidos")}
+        </button>
+        <button
+          type="button"
+          aria-pressed={value.onlyGroups ?? false}
+          onClick={() => onChange({ ...value, onlyGroups: !value.onlyGroups })}
+          className={cn(
+            "h-7 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors",
+            "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            value.onlyGroups
+              ? "border-accent bg-accent text-accent-foreground"
+              : "border-border bg-transparent text-text-muted hover:bg-surface-elevated",
+          )}
+        >
+          {t("Grupos")}
+        </button>
+
+        {mostrarSeletorDeTag && (
+          <DropdownMenu onOpenChange={(aberto) => {
+            if (!aberto) setBuscaDeEtiqueta("");
+          }}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "h-7 shrink-0 truncate rounded-full border border-border bg-transparent px-2.5 text-left text-xs font-medium text-text-muted hover:bg-surface-elevated shadow-none",
+                  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  etiquetas.length > 0 && "border-accent bg-accent-soft text-accent font-semibold",
+                )}
+                aria-label={t("Filtrar por tag")}
+              >
+                {etiquetas.length > 0 ? (
+                  <span className="inline-flex items-center gap-1">
+                    <ChipDeEtiqueta tag={etiquetas[0]!} className="h-4 px-1 text-[10px]" />
+                    {etiquetas.length > 1 && (
+                      <span className="tabular-nums text-[10px]">+{etiquetas.length - 1}</span>
+                    )}
+                  </span>
+                ) : (
+                  t("Todas as tags")
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <div className="px-2 pb-1">
+                <Input
+                  value={buscaDeEtiqueta}
+                  onChange={(e) => setBuscaDeEtiqueta(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key.length === 1) e.stopPropagation();
+                  }}
+                  placeholder={t("Buscar etiqueta")}
+                  aria-label={t("Buscar etiqueta")}
+                  className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs shadow-none focus-visible:border-border"
+                />
+              </div>
+              <DropdownMenuItem
+                onClick={() => onChange({ ...value, tag: undefined, tagMode: undefined })}
+              >
+                {t("Todas as tags")}
+              </DropdownMenuItem>
+              {etiquetas.length > 1 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuRadioGroup
+                    value={value.tagMode === "ou" ? "ou" : "e"}
+                    onValueChange={(modo) =>
+                      onChange({ ...value, tagMode: modo === "ou" ? "ou" : undefined })
+                    }
+                  >
+                    <DropdownMenuRadioItem value="e">{t("Todas (E)")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="ou">
+                      {t("Qualquer uma (OU)")}
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              {opcoesVisiveis.map((tag) => (
+                <DropdownMenuCheckboxItem
+                  key={tag}
+                  checked={etiquetas.includes(tag)}
+                  onCheckedChange={() => alternaEtiqueta(tag)}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <PontoDaEtiqueta tag={tag} />
+                    {tag}
+                  </span>
+                </DropdownMenuCheckboxItem>
+              ))}
+              {termoDaEtiqueta !== "" && opcoesVisiveis.length === 0 && (
+                <p className="px-2 py-1.5 text-xs text-text-subtle">
+                  {t("Nenhuma etiqueta com esse texto")}
+                </p>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {mostrarSeletorDeAtendente && (
+          <div className="shrink-0">
+            <SeletorDeAtendente
+              value={value.assigned_to}
+              onChange={(atendente) => onChange({ ...value, assigned_to: atendente })}
+            />
+          </div>
+        )}
+
+        {showChannelSwitch && (
+          <div className="shrink-0">
+            <Select
+              value={value.channel_session_id ?? "all"}
+              onValueChange={(v) =>
+                onChange({ ...value, channel_session_id: v === "all" ? undefined : v })
+              }
+            >
+              <SelectTrigger
+                className={cn(
+                  "h-7 shrink-0 rounded-full border-border bg-transparent px-2.5 text-xs shadow-none text-text-muted hover:bg-surface-elevated",
+                  value.channel_session_id != null && "border-accent bg-accent-soft text-accent",
+                )}
+                aria-label={t("Filtrar por número de WhatsApp")}
+              >
+                <SelectValue placeholder={t("Todos os números")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("Todos os números")}</SelectItem>
+                {filtroForaDaLista && value.channel_session_id != null && (
+                  <SelectItem value={value.channel_session_id}>{t("Número removido")}</SelectItem>
+                )}
+                {channels?.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {channelLabel(c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      {/* Barra de pesquisa sutil colocada em baixo das conversas */}
+      <div className="px-3 pb-2 pt-1">
+        <div className="relative w-full">
+          <MagnifyingGlass
+            size={13}
+            weight="regular"
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-subtle"
+            aria-hidden
+          />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("Buscar por nome, telefone ou mensagem…")}
+            className="h-8 w-full rounded-md border border-border/70 bg-surface-elevated/40 pl-8 pr-2.5 text-xs shadow-none placeholder:text-text-subtle focus-visible:border-border focus-visible:bg-background"
+            aria-label={t("Buscar conversas")}
+          />
+        </div>
+      </div>
     </div>
   );
 }
