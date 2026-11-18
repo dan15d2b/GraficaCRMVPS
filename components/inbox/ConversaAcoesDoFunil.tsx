@@ -14,9 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CaretDown, CheckCircle, ArrowRight, Clock, Warning } from "@/lib/ui/icons";
-import { FileText } from "lucide-react";
+import { FileText, Sparkles } from "lucide-react";
 import { useProvasDaConversa } from "@/hooks/inbox/useProvas";
 import { ModalEnviarProva } from "@/components/inbox/ModalEnviarProva";
+import { ModalImportarOrcamento } from "@/components/inbox/ModalImportarOrcamento";
 
 interface StageInfo {
   id: string;
@@ -51,6 +52,7 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
   const t = useT();
   const qc = useQueryClient();
   const [modalProvaAberta, setModalProvaAberta] = useState(false);
+  const [modalOrcamentoAberta, setModalOrcamentoAberta] = useState(false);
 
   const { data: provas } = useProvasDaConversa(conversationId);
   const provaMaisRecente = provas && provas.length > 0 ? provas[0] : null;
@@ -215,6 +217,19 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
           </Button>
         )}
 
+        {/* Botão de Leitura de Orçamento (PDF / Clipboard) */}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setModalOrcamentoAberta(true)}
+          className="h-7 cursor-pointer rounded-md px-2 text-xs font-medium text-slate-700 bg-surface-elevated/70 hover:bg-muted border-border transition-colors"
+          title={t("Importar orçamento em PDF ou texto, calcular prazo em dias úteis e atualizar proposta")}
+        >
+          <Sparkles className="mr-1 size-3 text-amber-500" aria-hidden />
+          <span>{t("Ler Orçamento")}</span>
+        </Button>
+
         {/* Etapas do Funil */}
         {lead && (
           <div className="flex items-center gap-1.5 max-md:hidden">
@@ -280,6 +295,13 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
       <ModalEnviarProva
         open={modalProvaAberta}
         onOpenChange={setModalProvaAberta}
+        conversationId={conversationId}
+        contactId={contactId}
+      />
+
+      <ModalImportarOrcamento
+        open={modalOrcamentoAberta}
+        onOpenChange={setModalOrcamentoAberta}
         conversationId={conversationId}
         contactId={contactId}
       />
