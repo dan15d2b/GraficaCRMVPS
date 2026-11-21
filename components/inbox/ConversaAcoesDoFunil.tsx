@@ -14,10 +14,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CaretDown, CheckCircle, ArrowRight, Clock, Warning } from "@/lib/ui/icons";
-import { FileText, Sparkles } from "lucide-react";
+import { FileText, Sparkles, XCircle } from "lucide-react";
 import { useProvasDaConversa } from "@/hooks/inbox/useProvas";
 import { ModalEnviarProva } from "@/components/inbox/ModalEnviarProva";
 import { ModalImportarOrcamento } from "@/components/inbox/ModalImportarOrcamento";
+import { LoseLeadDialog } from "@/components/kanban/LoseLeadDialog";
+import { ModalAgendarInstalacao } from "@/components/inbox/ModalAgendarInstalacao";
 
 interface StageInfo {
   id: string;
@@ -53,6 +55,13 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
   const qc = useQueryClient();
   const [modalProvaAberta, setModalProvaAberta] = useState(false);
   const [modalOrcamentoAberta, setModalOrcamentoAberta] = useState(false);
+
+  // Modais de Perda (Não Fechou) e Agendamento
+  const [modalPerdaAberta, setModalPerdaAberta] = useState(false);
+  const [targetLostStageId, setTargetLostStageId] = useState<string>("");
+
+  const [modalAgendamentoAberta, setModalAgendamentoAberta] = useState(false);
+  const [targetAgendarStageId, setTargetAgendarStageId] = useState<string>("");
 
   const { data: provas } = useProvasDaConversa(conversationId);
   const provaMaisRecente = provas && provas.length > 0 ? provas[0] : null;
@@ -103,6 +112,44 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
       toast.error(msg);
     },
   });
+
+  const handleMudarEtapa = (targetStage: StageInfo) => {
+    if (!lead) return;
+
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const nomeEtapa = norm(targetStage.name);
+
+    // 1. Etapa de Não Fechou / Perdido -> abre modal de seleção de motivo
+    if (
+      targetStage.is_lost ||
+      nomeEtapa.includes("nao fechou") ||
+      nomeEtapa.includes("não fechou") ||
+      nomeEtapa.includes("perdido")
+    ) {
+      setTargetLostStageId(targetStage.id);
+      setModalPerdaAberta(true);
+      return;
+    }
+
+    // 2. Etapa de Pronto para Instalação / Entrega -> abre pop-up do calendário
+    if (
+      targetStage.id === "7e9ce3af-96f4-495c-92a4-876fa8a82c7d" ||
+      nomeEtapa.includes("instalacao") ||
+      nomeEtapa.includes("instalação") ||
+      (nomeEtapa.includes("pronto") && nomeEtapa.includes("entrega"))
+    ) {
+      setTargetAgendarStageId(targetStage.id);
+      setModalAgendamentoAberta(true);
+      return;
+    }
+
+    // 3. Etapa normal -> move direto
+    moveMutation.mutate({ leadId: lead.id, nextStageId: targetStage.id });
+  };
 
   const proximasEtapasSugeridas = useMemo(() => {
     if (!lead || etapas.length === 0) return [];
@@ -166,12 +213,12 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
               size="sm"
               variant="outline"
               onClick={() => setModalProvaAberta(true)}
-              className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-semibold border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors"
+              className="h-7 cursor-pointer rounded-md px-2 text-xs font-semibold border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors"
               title={t("Clique para ver ou reenviar a prova digital")}
             >
               <Clock size={12} className="mr-1 text-amber-600" aria-hidden />
               <span>
-                {t("Prova Pendente")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
+                {t("Prova")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
               </span>
             </Button>
           ) : provaMaisRecente.status === "aprovada" ? (
@@ -180,12 +227,12 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
               size="sm"
               variant="outline"
               onClick={() => setModalProvaAberta(true)}
-              className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-semibold border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors"
+              className="h-7 cursor-pointer rounded-md px-2 text-xs font-semibold border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors"
               title={t("Arte aprovada pelo cliente. Clique para enviar nova prova se necessário.")}
             >
               <CheckCircle size={12} className="mr-1 text-emerald-600" aria-hidden />
               <span>
-                {t("Arte Aprovada")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
+                {t("Aprovada")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
               </span>
             </Button>
           ) : (
@@ -194,12 +241,12 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
               size="sm"
               variant="outline"
               onClick={() => setModalProvaAberta(true)}
-              className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-semibold border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-colors"
+              className="h-7 cursor-pointer rounded-md px-2 text-xs font-semibold border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100 transition-colors"
               title={t("Cliente solicitou ajuste na arte. Clique para enviar nova versão.")}
             >
               <Warning size={12} className="mr-1 text-rose-600" aria-hidden />
               <span>
-                {t("Ajuste Solicitado")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
+                {t("Ajuste")} {provaMaisRecente.os_number ? `(#${provaMaisRecente.os_number})` : ""}
               </span>
             </Button>
           )
@@ -236,10 +283,10 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
             {etapaAtualNome && (
               <Badge
                 variant="outline"
-                className="h-7 border-border/80 bg-surface-elevated/60 px-2.5 text-xs font-semibold text-foreground"
+                className="h-7 border-border/80 bg-surface-elevated/60 px-2 text-xs font-semibold text-foreground"
                 title={`${t("Etapa atual no Funil:")} ${etapaAtualNome}`}
               >
-                <span className="max-w-[130px] truncate">{etapaAtualNome}</span>
+                <span className="max-w-[120px] truncate">{etapaAtualNome}</span>
               </Badge>
             )}
 
@@ -250,12 +297,12 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
                 size="sm"
                 variant="secondary"
                 disabled={moveMutation.isPending}
-                onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: etapa.id })}
-                className="h-7 cursor-pointer rounded-md px-2.5 text-xs font-medium bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent-foreground transition-colors disabled:opacity-50"
+                onClick={() => handleMudarEtapa(etapa)}
+                className="h-7 cursor-pointer rounded-md px-2 text-xs font-medium bg-accent/15 text-accent hover:bg-accent/25 hover:text-accent-foreground transition-colors disabled:opacity-50"
                 title={`${t("Mover para")} ${etapa.name}`}
               >
                 <ArrowRight size={12} className="mr-1" aria-hidden />
-                <span className="max-w-[140px] truncate">{etapa.name}</span>
+                <span className="max-w-[130px] truncate">{etapa.name}</span>
               </Button>
             ))}
 
@@ -272,17 +319,18 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
                     <CaretDown size={13} weight="bold" aria-hidden />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-52">
                   {etapas
                     .filter((e) => e.id !== etapaAtualId)
                     .map((e) => (
                       <DropdownMenuItem
                         key={e.id}
-                        onClick={() => moveMutation.mutate({ leadId: lead.id, nextStageId: e.id })}
-                        className="flex cursor-pointer items-center justify-between text-xs"
+                        onClick={() => handleMudarEtapa(e)}
+                        className="flex cursor-pointer items-center justify-between text-xs py-1.5"
                       >
                         <span className="truncate">{e.name}</span>
                         {e.is_won && <CheckCircle size={13} className="text-emerald-500 shrink-0 ml-1" />}
+                        {e.is_lost && <XCircle size={13} className="text-rose-500 shrink-0 ml-1" />}
                       </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>
@@ -305,6 +353,55 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
         conversationId={conversationId}
         contactId={contactId}
       />
+
+      {lead && (
+        <>
+          <LoseLeadDialog
+            open={modalPerdaAberta}
+            onOpenChange={setModalPerdaAberta}
+            pipelineId={lead.pipeline_id}
+            leadId={lead.id}
+            leadLabel={lead.title}
+            onConfirm={async (lostReason: string) => {
+              const targetStage = targetLostStageId || lead.stage_id;
+              await apiClient.post("/api/v1/leads/bulk", {
+                action: "move",
+                lead_ids: [lead.id],
+                params: {
+                  stage_id: targetStage,
+                  lost_reason: lostReason,
+                },
+              });
+              toast.success(t("Negócio marcado como Não Fechou com sucesso."));
+              void qc.invalidateQueries({ queryKey: ["crm-summary", contactId] });
+              void qc.invalidateQueries({ queryKey: ["board"] });
+              void qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
+              void qc.invalidateQueries({ queryKey: ["crm-side-panel"] });
+            }}
+            onPerdido={() => {
+              void qc.invalidateQueries({ queryKey: ["crm-summary", contactId] });
+              void qc.invalidateQueries({ queryKey: ["board"] });
+              void qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
+              void qc.invalidateQueries({ queryKey: ["crm-side-panel"] });
+            }}
+          />
+
+          <ModalAgendarInstalacao
+            open={modalAgendamentoAberta}
+            onOpenChange={setModalAgendamentoAberta}
+            leadId={lead.id}
+            leadTitle={lead.title}
+            stageId={targetAgendarStageId}
+            contactId={contactId}
+            conversationId={conversationId}
+            onSuccess={() => {
+              void qc.invalidateQueries({ queryKey: ["crm-summary", contactId] });
+              void qc.invalidateQueries({ queryKey: ["board"] });
+              void qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
+            }}
+          />
+        </>
+      )}
     </>
   );
 }

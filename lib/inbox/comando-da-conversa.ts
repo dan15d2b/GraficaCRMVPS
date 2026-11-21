@@ -95,6 +95,8 @@ export interface FatosDoComando {
    * controle decorativo, que é pior que ausência de botão.
    */
   is_blocked?: boolean | null;
+  /** Etiquetas / Tags da conversa ou contato para triagem de atendimento */
+  tags?: string[] | null;
 }
 
 export type Comando =
@@ -193,6 +195,31 @@ const MENOS_INFINITO = "-infinity";
  */
 export const STATUS_ENCERRADOS = new Set(["closed", "archived", "resolved"]);
 
+export const TAGS_SEM_RESPOSTA_IA = new Set([
+  "pedido em andamento",
+  "em produção",
+  "em producao",
+  "fazer orçamento",
+  "fazer orcamento",
+  "orçamento",
+  "orcamento",
+  "fornecedor",
+  "fornecedores",
+  "contratos",
+  "contrato",
+  "instalador",
+  "instaladores",
+  "aguardando-atendente",
+  "aguardando atendente",
+  "não responder",
+  "nao responder",
+  "concluído",
+  "concluido",
+  "finalizado",
+  "pronto para retirada",
+  "pronto para instalação / entrega",
+]);
+
 /**
  * O silêncio, lido do jeito que o Postgres o entrega.
  *
@@ -232,6 +259,10 @@ export function comandoDaConversa(fatos: FatosDoComando, agora: Date = new Date(
   const bloqueado = fatos.is_blocked === true;
   const encerrada = STATUS_ENCERRADOS.has(fatos.status);
   const grupo = fatos.is_group === true;
+  const temTagExcluida = Boolean(
+    fatos.tags &&
+      fatos.tags.some((t) => TAGS_SEM_RESPOSTA_IA.has(t.toLowerCase().trim()))
+  );
 
   const comando: Comando = fatos.assigned_to_user_id
     ? {
@@ -241,7 +272,9 @@ export function comandoDaConversa(fatos: FatosDoComando, agora: Date = new Date(
       }
     : encerrada
       ? { quem: "encerrada" }
-      : // Sem dono: quem manda depende do automático estar de pé. Calado e sem
+      : temTagExcluida
+        ? { quem: "ninguem" }
+        : // Sem dono: quem manda depende do automático estar de pé. Calado e sem
         // dono é a conversa que o automático escalou e ninguém pegou — a fila.
         // Grupo entra junto: o automático nunca o atende, é sempre de humano.
         grupo || silencio.vigente || travado || bloqueado

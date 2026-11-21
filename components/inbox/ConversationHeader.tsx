@@ -237,6 +237,7 @@ export function ConversationHeader({
     is_blocked: conversation.contacts?.is_blocked ?? null,
     is_group: conversation.is_group ?? false,
     automaticoDaOrg: automaticoDaOrg.data,
+    tags: conversation.tags,
   };
   const { comando, automaticoAtivo, travaVigente, motivo } = comandoDaConversa(fatosDoComando);
   /**
@@ -297,32 +298,13 @@ export function ConversationHeader({
     <strong>{displayName}</strong><span className="text-sm text-muted-foreground">{STATUS_LABEL[status] ?? status} · Somente leitura</span>
   </header>;
   return (
-    // `flex-wrap` porque este header travava a LARGURA DA TELA INTEIRA. Ele
-    // media 707px de `min-content` — a identidade do contato encolhia bem
-    // (`min-w-0` + `truncate`), mas a barra de ações era `shrink-0` e não
-    // quebrava. Como a coluna do meio do inbox é `1fr`, que é
-    // `minmax(auto, 1fr)`, ela não podia ficar menor que esses 707px, e o
-    // painel de CRM era empurrado 311px para fora da viewport em 1280px.
-    //
-    // Reorganizar em vez de esconder: acima de ~1440px o header fica IDÊNTICO ao
-    // de antes (uma linha), e quando aperta a barra desce para a linha de baixo.
-    // Nenhuma ação some da conversa (doc de decisão 251, 03/11): as do dia a
-    // dia ficam à vista e o resto fica no menu ⋯ (#3003).
-    //
-    // NO CELULAR a quebra vira o problema oposto: com ~390px de largura a barra
-    // descia em três ou quatro fileiras de botões e comia metade da tela,
-    // deixando quase nada para as mensagens. Abaixo do `md` a barra é UMA
-    // fileira que rola na horizontal — a mesma régua de não esconder ação, sem
-    // pagar em altura. `py-2` pelo mesmo motivo: cada pixel de altura ali é
-    // tirado da conversa.
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-3 py-2 md:gap-3 md:px-4 md:py-3">
-      {/* FAIXA DA CARTEIRA (#2591, regra 2): "este cliente pertence à carteira de
-          A". `w-full` a põe numa linha própria acima da identidade, sem disputar
-          espaço com a barra de ações — a faixa só existe quando o dono é OUTRA
-          pessoa (o componente decide; sem carteira ele não desenha nada). */}
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-1.5 flex-wrap">
-          <ChannelLogo channel={conversation.channel_sessions} size={20} />
+    <>
+    <div className="flex flex-col gap-1 border-b border-border bg-background px-3 py-1.5 md:px-4 md:py-2">
+      {/* LINHA 1: Identidade do Contato à esquerda + Barra de Ações à direita (Área verde) */}
+      <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
+        {/* Identidade */}
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+          <ChannelLogo channel={conversation.channel_sessions} size={18} />
           <h2 className="min-w-0 truncate text-sm font-semibold" title={displayName}>{displayName}</h2>
           <Badge variant="outline" className="h-4 shrink-0 px-1.5 text-[10px]">
             {t(STATUS_LABEL[status] ?? status)}
@@ -348,386 +330,269 @@ export function ConversationHeader({
           />
         </div>
 
-        {/* QUEM ESTÁ NO COMANDO, com nome e por GEOMETRIA — disco cheio para
-            pessoa, anel vazado para o automático. É o mesmo componente do card do
-            funil e do dossiê: um terceiro jeito de dizer "quem manda", por cor ou
-            por texto, faria a mesma pergunta ter três respostas diferentes na
-            mesma tela. Cor não sobrevive ao daltonismo nem ao teste do metro. */}
-        <div className="mt-1 flex items-center gap-2" data-testid="comando-da-conversa">
-          {comando.quem === "humano" ? (
-            <OwnerBadge ownerKind="user" ownerName={comando.nome ?? t("Atendente")} />
-          ) : comando.quem === "automatico" ? (
-            <OwnerBadge ownerKind="ai" ownerName={t("Automático")} />
-          ) : (
-            // `ninguem`, `aguardando` e `encerrada` sem dono caem aqui: o disco
-            // TRACEJADO do OwnerBadge, que é como o funil já desenha "ninguém".
-            <OwnerBadge ownerKind={null} ownerName={null} />
-          )}
-        </div>
-        {phone && (
-          // No celular o telefone sai: cada linha do cabeçalho é altura tirada
-          // do fio, e o número continua na Ficha.
-          <p className="mt-0.5 flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground max-md:hidden">
-            <Phone size={11} weight="regular" aria-hidden /> {phone}
-          </p>
-        )}
-        {/* Contato com telefone extra: diz por qual número a resposta sai. Sem
-            extra, nada muda na tela. No canal que responde pela última mensagem
-            recebida, a resposta vai para o número por onde ela chegou; nos outros
-            segue pelo principal, e a linha não aparece. */}
-        {endereco?.has_extras && c?.phone_number && endereco.follows_last_inbound && endereco.phone_number && (
-          <p className="mt-0.5 min-w-0 truncate text-xs text-muted-foreground max-md:hidden" data-testid="resposta-sai-por">
-            {t("A resposta sai por:")} {phoneForDisplay(endereco.phone_number)}
-          </p>
-        )}
-      </div>
-
-      {/* `shrink-0` saiu daqui: era ele que impunha o piso de largura. Agora a
-          barra pode encolher e quebrar internamente, e os botões continuam
-          todos visíveis e clicáveis — só que em duas linhas quando preciso.
-          Esta coluna existe para o selo do automático morar ABAIXO da barra
-          (#1625): na linha do nome ele alargava a identidade e empurrava a
-          barra inteira para baixo. Ela também não é `shrink-0`, pelo mesmo
-          motivo da barra. */}
-      {/* NO CELULAR (F2 da ADR-0006): com o teclado aberto a coluna sai e o fio
-          fica com a altura (`data-teclado-aberto`, de `useAlturaVisivel`); a
-          máscara apaga a borda direita para dizer que a fileira rola, e o `pr-8`
-          deixa o último botão fora da máscara quando rolado até o fim. Tudo
-          `max-md:` — no computador encolher a janela não é teclado. */}
-      <div className="flex min-w-0 flex-col items-end gap-1 max-md:w-full max-md:items-stretch max-md:group-data-[teclado-aberto]/conversa:hidden">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:pr-8 max-md:[&>*]:shrink-0 max-md:[mask-image:linear-gradient(to_right,black_calc(100%_-_2rem),transparent)]">
-        <ConversaAcoesDoFunil
-          contactId={c?.id ?? null}
-          conversationId={conversation.id}
-        />
-        {/* Primeira da barra e sem rótulo escrito: é ferramenta de LEITURA, não
-            ação de atendimento, e não muda de lugar com o estado da conversa.
-            Só o ícone porque a barra já quebrou a caixa útil em 1280px uma vez
-            (ver o comentário do interruptor abaixo). */}
-        {onBuscar && (
-          <Button
-            ref={botaoBuscaRef}
-            size="sm"
-            variant="ghost"
-            className="w-11 px-0 lg:w-8"
-            onClick={onBuscar}
-            aria-label={t("Buscar nesta conversa")}
-            title={t("Buscar nesta conversa")}
-            data-testid="buscar-na-conversa"
-            aria-expanded={buscaAberta}
-          >
-            <MagnifyingGlass size={16} aria-hidden />
-          </Button>
-        )}
-        {/* QUEM MAIS ESTÁ AQUI (#2542) fica na BARRA, e só a PRESENÇA (#3003).
-            Os avatares são informação — "quem mais está comigo nesta conversa?"
-            —, e informação dentro de um menu deixa de ser lida. O convite é
-            AÇÃO e mudou de lugar: mora no ⋯ (`modo="convite"`), com ícone e
-            nome, como as outras ações secundárias. */}
-        <ParticipantesDaConversa
-          conversationId={conversation.id}
-          podeConvidar={podeConvidar}
-          atendenteId={user.id}
-          modo="presenca"
-        />
-        {podeAssumir && (
-          <Button
-            size="sm"
-            variant="default"
-            // No celular, a ação que a pessoa veio fazer abre a fileira — sem
-            // rolar para achá-la. Só CSS: a ordem do DOM não muda.
-            className="max-md:order-first"
-            data-testid="acao-assumir"
-            disabled={claim.isPending}
-            // O rótulo NÃO muda (é contrato: `inbox-header-nao-trava` e o
-            // dicionário de espanhol o citam). O que faltava era a consequência
-            // dita: desde a 0173 assumir também para o atendimento automático, e
-            // um botão que muda duas coisas precisa anunciar as duas.
-            title={t("Você passa a responder esta conversa e o atendimento automático para aqui.")}
-            onClick={() =>
-              claim.mutate({
-                conversation_id: conversation.id,
-                expected_assignee: conversation.assigned_to_user_id,
-              })
-            }
-          >
-            {t("Assumir")}
-          </Button>
-        )}
-        {isMineAssigned && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="max-md:order-first"
-            data-testid="acao-liberar"
-            disabled={release.isPending}
-            // GUIA CURTA (#3003): o rótulo diz o GESTO, não a consequência. "Liberar"
-            // não conta para onde a conversa vai — de volta ao automático ou para a
-            // fila (ver `liberarDevolveAoAutomatico`) — e essa é exatamente a
-            // pergunta "o que acontece se eu clicar aqui?".
-            //
-            // A guia vai em `title`, e NÃO em `aria-label`: o `aria-label`
-            // SUBSTITUI o nome acessível, e `getByRole("button", { name: "Liberar" })`
-            // de `inbox-header-nao-trava` e de `ConversationHeader.test` deixaria de
-            // achar o botão. É o mesmo caminho já usado por "Assumir", "Devolver ao
-            // automático" e "Pausar o automático" neste arquivo.
-            title={
-              liberarDevolveAoAutomatico
-                ? t("Solta esta conversa: ela fica sem dono e o atendimento automático volta a responder.")
-                : t("Solta esta conversa: ela fica sem dono e volta para a fila, esperando um atendente.")
-            }
-            onClick={() => release.mutate({ conversation_id: conversation.id })}
-          >
-            {t("Liberar")}
-          </Button>
-        )}
-        {/* O INTERRUPTOR. Um botão, dois rótulos, um slot.
-            Fica ANTES de transferir/fechar porque é a ação que a pessoa procura
-            quando terminou o que tinha para fazer aqui.
-
-            Dois botões lado a lado foi medido e recusado: a barra de ações já
-            estourou a caixa útil de 392px em 1280px uma vez (ver o comentário no
-            topo do JSX), e um botão a mais custa ~85px — o cabeçalho ganharia uma
-            segunda fileira justo na largura mais apertada. Os dois estados são
-            mutuamente exclusivos, então nunca precisam existir juntos.
-
-            O `data-testid` do lado de VOLTA é o mesmo de antes: `escalacao-ciclo`
-            o clica, e rótulo/testid visível é contrato. */}
-        {podeDevolver && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={retomar.isPending}
-            data-testid="devolver-ao-automatico"
-            // O ALCANCE DA VOLTA NÃO É SEMPRE O MESMO, e a tela precisa dizer qual é.
-            //
-            // `devolverAtendimentoAoAgente` limpa `contacts.force_human`, que é do
-            // CLIENTE e não desta conversa: quando foi ela que travou, o clique
-            // religa o automático para TODAS as conversas daquela pessoa. Um botão
-            // que às vezes faz mais do que o nome promete precisa dizer quando.
-            title={
-              motivo === "contato_travado"
-                ? t("Religa o atendimento automático para este cliente — vale para todas as conversas dele.")
-                : t("Devolve esta conversa ao atendimento automático.")
-            }
-            onClick={() => retomar.mutate({ conversation_id: conversation.id })}
-          >
-            {retomar.isPending ? t("Devolvendo...") : t("Devolver ao automático")}
-          </Button>
-        )}
-        {!encerrada && (
-          <Button
-            size="sm"
-            variant="outline"
-            data-testid="acao-transferir"
-            // GUIA CURTA (#3003): "Transferir" não diz PARA QUEM. A aba Número do
-            // diálogo é a outra metade da resposta — mas ela aparece quando a org
-            // tem outro número com telefone, inclusive fora do ar (com a opção
-            // desabilitada; `outrosNumerosDoContato`), e ela não move esta
-            // conversa: continua o atendimento do contato por lá.
-            title={t("Passa esta conversa para outro atendente. Se houver outro número conectado, dá para continuar o atendimento por ele.")}
-            onClick={() => setReassignOpen(true)}
-          >
-            {t("Transferir")}
-          </Button>
-        )}
-        {!encerrada && (
-          <Button
-            size="sm"
-            variant="outline"
-            data-testid="acao-fechar"
-            disabled={close.isPending}
-            // GUIA CURTA (#3003): "Fechar" sozinho não distingue encerrar de
-            // arquivar — que é o clique errado relatado na issue. A guia diz o que
-            // muda e o que continua disponível depois (reabrir).
-            title={t("Encerra o atendimento. Depois você pode reabrir a conversa.")}
-            onClick={() => {
-              // Padrão marcado a cada abertura: a escolha é DESTA conversa.
-              setDevolverAoFechar(true);
-              setConfirmFecharOpen(true);
-            }}
-          >
-            {t("Fechar")}
-          </Button>
-        )}
-        {encerrada && <Button size="sm" variant="outline" data-testid="acao-reabrir" disabled={reopen.isPending}
-          // GUIA CURTA (#3003): o par de "Fechar" precisa da mesma clareza — o
-          // rótulo não diz que a conversa volta a ser atendida.
-          title={t("Reabre o atendimento desta conversa, que estava encerrada.")}
-          onClick={() => reopen.mutate({ conversation_id: conversation.id, expected_revision: conversation.service_revision })}>
-          {t("Reabrir")}
-        </Button>}
-        {/* ─── O MENU ⋯ (#3003): o que NÃO é do dia a dia ──────────────────────
-            A issue relata a confusão de quem está começando: a barra oferecia
-            doze controles ao mesmo tempo e nenhum deles respondia "o que
-            acontece se eu clicar aqui?". Agora a barra guarda as ações de todo
-            atendimento — responder (assumir/devolver), transferir e encerrar —
-            e o resto mora aqui, com ícone, nome e a MESMA guia de uma linha
-            que os botões visíveis têm.
-
-            O QUE ESTE MENU NÃO PODE FAZER: esconder ação. Cada item mantém a
-            condição que já o governava (o `podePausar`, o `status !==
-            "archived"`, o gate de `podeMarcarPessoal`, o `null` que o
-            `VideoCallButton` devolve sem servidor) — nada aqui é recalculado
-            pela barra, senão a regra viveria em dois lugares e divergiria na
-            primeira mudança. `tests/unit/inbox-barra-enxuta-3003.test.tsx`
-            falha se uma ação sair da tela sem estar aqui, e falha de novo se
-            sair daqui sem estar na tela.
-
-            O nome acessível é "Mais ações", o mesmo da barra de ações em lote.
-            No celular o gatilho tem 44px (`w-11`, como a busca ao lado); o
-            `lg:w-8` só vale onde há ponteiro fino. */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        {/* Barra de Ações alinhada à direita no topo */}
+        <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0 max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 max-md:pr-8 max-md:[&>*]:shrink-0">
+          <ConversaAcoesDoFunil
+            contactId={c?.id ?? null}
+            conversationId={conversation.id}
+          />
+          {onBuscar && (
             <Button
+              ref={botaoBuscaRef}
               size="sm"
               variant="ghost"
-              className="w-11 px-0 lg:w-8"
-              aria-label={t("Mais ações")}
-              title={t("Mais ações desta conversa")}
-              data-testid="menu-de-acoes"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+              onClick={onBuscar}
+              aria-label={t("Buscar nesta conversa")}
+              title={t("Buscar nesta conversa")}
+              data-testid="buscar-na-conversa"
+              aria-expanded={buscaAberta}
             >
-              <DotsThree size={16} weight="bold" aria-hidden />
+              <MagnifyingGlass size={15} aria-hidden />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64" data-testid="menu-de-acoes-conteudo">
-            {/* Por onde entrar em contato com a pessoa. Era `xl:hidden` na barra
-                porque a partir de 1280px o painel de CRM tem um "Ver contato"
-                próprio; dentro do menu a duplicata não custa fileira nenhuma,
-                então o item aparece em qualquer largura. */}
-            {c?.id && (
-              <DropdownMenuItem asChild>
-                <Link
-                  href={`/app/contacts/${c.id}`}
-                  className="flex w-full items-center gap-2"
-                  data-testid="acao-ver-contato"
-                  // GUIA CURTA (#3003): o rótulo promete "contato" e entrega uma
-                  // página inteira; a guia diz qual.
-                  title={t("Abre a ficha completa deste contato.")}
-                >
-                  <UserCircle size={16} aria-hidden />
-                  {t("Ver contato")}
-                </Link>
-              </DropdownMenuItem>
-            )}
-            {/* A chamada usa o telefone da ficha, mesmo quando o contato chegou
-                por outro canal. Grupos não representam uma pessoa para ligar. */}
-            {!conversation.is_group && c?.id && (
-              <DialButton contactId={c.id} hasPhone={!!c.phone_number} comoItemDeMenu />
-            )}
-            {podeReservar && <ItemReservarServico onSelect={() => setReservaAberta(true)} />}
-            {/* Vídeo: sem JITSI_SERVER_URL o componente devolve `null` e o item
-                não existe — o menu não promete o que a instalação não tem. */}
-            <VideoCallButton
-              conversationId={conversation.id}
-              provider={conversation.channel_sessions?.provider ?? null}
-              lastInboundAt={conversation.last_inbound_at}
-              bloqueio={motivoDoContato(c, t)}
-              encerrada={status === "closed"}
-              comoItemDeMenu
-            />
-            {/* ATENDIMENTO CONJUNTO (#2542): o convite é ação, a presença é
-                informação — a presença ficou na barra (`modo="presenca"`) e o
-                convite vira item daqui. O diálogo NÃO mora dentro do menu: ver
-                `DialogoDeConvite`, montado no fim deste componente. */}
-            {podeConvidar && (
-              <DropdownMenuItem
-                data-testid="convidar-participante"
-                title={t("Convida um colega para atender junto — o responsável pela conversa não muda.")}
-                onSelect={() => setConviteAberto(true)}
+          )}
+          <ParticipantesDaConversa
+            conversationId={conversation.id}
+            podeConvidar={podeConvidar}
+            atendenteId={user.id}
+            modo="presenca"
+          />
+          {podeAssumir && (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-7 px-2.5 text-xs max-md:order-first"
+              data-testid="acao-assumir"
+              disabled={claim.isPending}
+              title={t("Você passa a responder esta conversa e o atendimento automático para aqui.")}
+              onClick={() =>
+                claim.mutate({
+                  conversation_id: conversation.id,
+                  expected_assignee: conversation.assigned_to_user_id,
+                })
+              }
+            >
+              {t("Assumir")}
+            </Button>
+          )}
+          {isMineAssigned && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5 text-xs max-md:order-first"
+              data-testid="acao-liberar"
+              disabled={release.isPending}
+              title={
+                liberarDevolveAoAutomatico
+                  ? t("Solta esta conversa: ela fica sem dono e o atendimento automático volta a responder.")
+                  : t("Solta esta conversa: ela fica sem dono e volta para a fila, esperando um atendente.")
+              }
+              onClick={() => release.mutate({ conversation_id: conversation.id })}
+            >
+              {t("Liberar")}
+            </Button>
+          )}
+          {podeDevolver && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              disabled={retomar.isPending}
+              data-testid="devolver-ao-automatico"
+              title={
+                motivo === "contato_travado"
+                  ? t("Religa o atendimento automático para este cliente — vale para todas as conversas dele.")
+                  : t("Devolve esta conversa ao atendimento automático.")
+              }
+              onClick={() => retomar.mutate({ conversation_id: conversation.id })}
+            >
+              {retomar.isPending ? t("Devolvendo...") : t("Devolver ao automático")}
+            </Button>
+          )}
+          {!encerrada && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              data-testid="acao-transferir"
+              title={t("Passa esta conversa para outro atendente. Se houver outro número conectado, dá para continuar o atendimento por ele.")}
+              onClick={() => setReassignOpen(true)}
+            >
+              {t("Transferir")}
+            </Button>
+          )}
+          {!encerrada && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              data-testid="acao-fechar"
+              disabled={close.isPending}
+              title={t("Encerra o atendimento. Depois você pode reabrir a conversa.")}
+              onClick={() => {
+                setDevolverAoFechar(true);
+                setConfirmFecharOpen(true);
+              }}
+            >
+              {t("Fechar")}
+            </Button>
+          )}
+          {encerrada && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              data-testid="acao-reabrir"
+              disabled={reopen.isPending}
+              title={t("Reabre o atendimento desta conversa, que estava encerrada.")}
+              onClick={() => reopen.mutate({ conversation_id: conversation.id, expected_revision: conversation.service_revision })}
+            >
+              {t("Reabrir")}
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                aria-label={t("Mais ações")}
+                title={t("Mais ações desta conversa")}
+                data-testid="menu-de-acoes"
               >
-                <UsersThree size={16} aria-hidden className="mr-2" />
-                {t("Convidar")}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            {podePausar && (
-              <DropdownMenuItem
-                data-testid="pausar-o-automatico"
-                disabled={pausar.isPending}
-                // `podePausar` já exige dono != null, então este botão NUNCA aparece
-                // sem dono — prometer "você assume" aqui seria prometer o que a rota
-                // não faz: com dono, ela só cala, nunca rouba a conversa de quem a tem.
-                title={t("O atendimento automático para nesta conversa. O dono não muda.")}
-                onSelect={() => pausar.mutate({ conversation_id: conversation.id })}
-              >
-                <Pause size={16} aria-hidden className="mr-2" />
-                {pausar.isPending ? t("Pausando...") : t("Pausar o automático")}
-              </DropdownMenuItem>
-            )}
-            {!encerrada && (
-              <SnoozeButton
+                <DotsThree size={16} weight="bold" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64" data-testid="menu-de-acoes-conteudo">
+              {c?.id && (
+                <DropdownMenuItem asChild>
+                  <Link
+                    href={`/app/contacts/${c.id}`}
+                    className="flex w-full items-center gap-2"
+                    data-testid="acao-ver-contato"
+                    title={t("Abre a ficha completa deste contato.")}
+                  >
+                    <UserCircle size={16} aria-hidden />
+                    {t("Ver contato")}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {!conversation.is_group && c?.id && (
+                <DialButton contactId={c.id} hasPhone={!!c.phone_number} comoItemDeMenu />
+              )}
+              {podeReservar && <ItemReservarServico onSelect={() => setReservaAberta(true)} />}
+              <VideoCallButton
                 conversationId={conversation.id}
-                snoozeUntil={conversation.snooze_until ?? null}
-                modo="submenu"
+                provider={conversation.channel_sessions?.provider ?? null}
+                lastInboundAt={conversation.last_inbound_at}
+                bloqueio={motivoDoContato(c, t)}
+                encerrada={status === "closed"}
+                comoItemDeMenu
               />
-            )}
-            <DropdownMenuSeparator />
-            {/* ARQUIVAR (#923): tira da frente sem destruir.
-                A conversa já arquivada não mostra o item — arquivar duas vezes
-                não é um gesto que exista, e o item só reapareceria como um
-                clique que não muda nada. Fechada E resolvida mostram: são
-                exatamente as que se quer mandar para o arquivo depois de
-                encerradas, e é o caminho que faz a aba "Arquivadas" deixar de
-                ser uma pasta morta.
-                A permissão é a mesma de fechar (a rota `/conversations/[id]` é
-                `requireSupportWrite`): quem pode encerrar, pode arquivar. */}
-            {status !== "archived" && (
-              <DropdownMenuItem
-                data-testid="acao-arquivar"
-                disabled={arquivar.isPending}
-                // GUIA CURTA (#3003): "Arquivar" parece "guardar e pronto", e não é —
-                // numa conversa ainda aberta ele ENCERRA o atendimento (o diálogo de
-                // confirmação diz isso com todas as letras, e a guia diz antes dele).
-                // Ela NÃO some do inbox: sai da Fila e de Minhas, e segue em Todas e
-                // em Arquivadas (`tabToFilter` em InboxLayout).
-                title={t("Guarda a conversa na aba Arquivadas. Se ainda estiver aberta, o atendimento é encerrado.")}
-                onSelect={() => setConfirmArquivarOpen(true)}
-              >
-                <Archive size={16} aria-hidden className="mr-2" />
-                {arquivar.isPending ? t("Arquivando...") : t("Arquivar")}
-              </DropdownMenuItem>
-            )}
-            {/* PESSOAL (spec 21, etapa 15): marcar tira a conversa do inbox na
-                hora; desmarcar relista. O `data-testid` é contrato do e2e da
-                spec (`contato-pessoal-sai-da-operacao.spec.ts`). */}
-            {podeMarcarPessoal && c?.id && !ehPessoal && (
-              <DropdownMenuItem
-                data-testid="marcar-pessoal"
-                disabled={marcarPessoal.isPending}
-                title={t("Tira este contato da operação: a conversa sai do inbox.")}
-                onSelect={() => setConfirmPessoalOpen(true)}
-              >
-                <EyeSlash size={16} aria-hidden className="mr-2" />
-                {t("Marcar como pessoal")}
-              </DropdownMenuItem>
-            )}
-            {podeMarcarPessoal && c?.id && ehPessoal && (
-              <DropdownMenuItem
-                data-testid="desmarcar-pessoal"
-                disabled={desmarcarPessoal.isPending}
-                title={t("Devolve este contato à operação: a conversa volta ao inbox.")}
-                onSelect={() => desmarcarPessoal.mutate()}
-              >
-                <EyeSlash size={16} aria-hidden className="mr-2" />
-                {desmarcarPessoal.isPending ? t("Desmarcando...") : t("Desmarcar pessoal")}
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {podeConvidar && (
+                <DropdownMenuItem
+                  data-testid="convidar-participante"
+                  title={t("Convida um colega para atender junto — o responsável pela conversa não muda.")}
+                  onSelect={() => setConviteAberto(true)}
+                >
+                  <UsersThree size={16} aria-hidden className="mr-2" />
+                  {t("Convidar")}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {podePausar && (
+                <DropdownMenuItem
+                  data-testid="pausar-o-automatico"
+                  disabled={pausar.isPending}
+                  title={t("O atendimento automático para nesta conversa. O dono não muda.")}
+                  onSelect={() => pausar.mutate({ conversation_id: conversation.id })}
+                >
+                  <Pause size={16} aria-hidden className="mr-2" />
+                  {pausar.isPending ? t("Pausando...") : t("Pausar o automático")}
+                </DropdownMenuItem>
+              )}
+              {!encerrada && (
+                <SnoozeButton
+                  conversationId={conversation.id}
+                  snoozeUntil={conversation.snooze_until ?? null}
+                  modo="submenu"
+                />
+              )}
+              <DropdownMenuSeparator />
+              {status !== "archived" && (
+                <DropdownMenuItem
+                  data-testid="acao-arquivar"
+                  disabled={arquivar.isPending}
+                  title={t("Guarda a conversa na aba Arquivadas. Se ainda estiver aberta, o atendimento é encerrado.")}
+                  onSelect={() => setConfirmArquivarOpen(true)}
+                >
+                  <Archive size={16} aria-hidden className="mr-2" />
+                  {arquivar.isPending ? t("Arquivando...") : t("Arquivar")}
+                </DropdownMenuItem>
+              )}
+              {podeMarcarPessoal && c?.id && !ehPessoal && (
+                <DropdownMenuItem
+                  data-testid="marcar-pessoal"
+                  disabled={marcarPessoal.isPending}
+                  title={t("Tira este contato da operação: a conversa sai do inbox.")}
+                  onSelect={() => setConfirmPessoalOpen(true)}
+                >
+                  <EyeSlash size={16} aria-hidden className="mr-2" />
+                  {t("Marcar como pessoal")}
+                </DropdownMenuItem>
+              )}
+              {podeMarcarPessoal && c?.id && ehPessoal && (
+                <DropdownMenuItem
+                  data-testid="desmarcar-pessoal"
+                  disabled={desmarcarPessoal.isPending}
+                  title={t("Devolve este contato à operação: a conversa volta ao inbox.")}
+                  onSelect={() => desmarcarPessoal.mutate()}
+                >
+                  <EyeSlash size={16} aria-hidden className="mr-2" />
+                  {desmarcarPessoal.isPending ? t("Desmarcando...") : t("Desmarcar pessoal")}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-        {/* O aviso pertence à operação automática. Abaixo da barra ele não
-            alarga a ficha do contato nem muda a posição dos botões.
-            Sem esta marca, a conversa em que o robô está calado tem exatamente
-            a mesma cara de uma conversa normal. O testid é contrato:
-            `escalacao-ciclo.spec.ts` o clica. */}
+
+      {/* LINHA 2: Responsável, Telefone e Status do Automático */}
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground pt-0.5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div data-testid="comando-da-conversa">
+            {comando.quem === "humano" ? (
+              <OwnerBadge ownerKind="user" ownerName={comando.nome ?? t("Atendente")} />
+            ) : comando.quem === "automatico" ? (
+              <OwnerBadge ownerKind="ai" ownerName={t("Automático")} />
+            ) : (
+              <OwnerBadge ownerKind={null} ownerName={null} />
+            )}
+          </div>
+          {phone && (
+            <p className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground max-md:hidden">
+              <Phone size={11} weight="regular" aria-hidden /> {phone}
+            </p>
+          )}
+          {endereco?.has_extras && c?.phone_number && endereco.follows_last_inbound && endereco.phone_number && (
+            <p className="min-w-0 truncate text-xs text-muted-foreground max-md:hidden" data-testid="resposta-sai-por">
+              {t("A resposta sai por:")} {phoneForDisplay(endereco.phone_number)}
+            </p>
+          )}
+        </div>
+
         {motivo !== null && (
-          <Badge variant="outline" className="h-4 w-fit max-w-full truncate px-1.5 text-[10px]"
-            title={t(ROTULO_DO_MOTIVO[motivo])} data-testid="badge-atendimento-humano">
+          <Badge
+            variant="outline"
+            className="h-4 w-fit max-w-full truncate px-1.5 text-[10px]"
+            title={t(ROTULO_DO_MOTIVO[motivo])}
+            data-testid="badge-atendimento-humano"
+          >
             {t(ROTULO_DO_MOTIVO[motivo])}
           </Badge>
         )}
       </div>
+    </div>
       <ReassignDialog
         conversationId={conversation.id}
         open={reassignOpen}
@@ -905,6 +770,6 @@ export function ConversationHeader({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
