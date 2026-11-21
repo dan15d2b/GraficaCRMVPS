@@ -85,8 +85,11 @@ export function ModalAgendarInstalacao({
 
           if (match) {
             setSelectedEventTypeId(match.id);
-          } else if (rows.length > 0) {
-            setSelectedEventTypeId(rows[0].id);
+          } else {
+            const first = rows[0];
+            if (first) {
+              setSelectedEventTypeId(first.id);
+            }
           }
         })
         .catch((err) => {
