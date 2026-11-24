@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { Sparkle, Storefront } from "@/lib/ui/icons";
 import {
   TIPOS_DE_FONTE,
   TIPO_DE_FONTE_POR_ID,
@@ -91,6 +92,27 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
   }
 
   async function criar(): Promise<void> {
+    if (tipo === "catalogo") {
+      setEnviando(true);
+      try {
+        const res = await apiClient.post<{ message?: string; total_products?: number }>(
+          "/api/v1/ai/knowledge/sync-catalog",
+          {},
+        );
+        toast.success(
+          res?.message || t("Catálogo de produtos sincronizado com sucesso no acervo da IA!"),
+        );
+        limpar();
+        onCriado();
+        onFechar();
+      } catch (err) {
+        showApiError(err);
+      } finally {
+        setEnviando(false);
+      }
+      return;
+    }
+
     const nomeLimpo = nome.trim();
     if (nomeLimpo.length < 2) {
       toast.error(t("Dê um nome ao material — é assim que você o encontra depois."));
@@ -161,7 +183,7 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="material-tipos">
               {/* `tf`, e não `t`: o `t` do `useT()` já ocupa o nome aqui. */}
               {TIPOS_DE_FONTE.map((tf) => {
-                const rotina = ePreenchidoPorRotina(tf.id);
+                const rotina = tf.id === "conversas" && ePreenchidoPorRotina(tf.id);
                 const marcado = tipo === tf.id;
                 return (
                   <button
@@ -182,65 +204,93 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
                 );
               })}
             </div>
-            {porRotina && meta?.comoChega ? (
+            {tipo === "conversas" && porRotina && meta?.comoChega ? (
               <p className="text-xs text-text-muted">{t(meta.comoChega)}</p>
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="material-nome">{t("Nome do material")}</Label>
-            <Input
-              id="material-nome"
-              data-testid="material-nome"
-              placeholder={tipo === "faq" ? t("Perguntas frequentes da loja") : t("Política de troca")}
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              disabled={enviando || porRotina}
-            />
-          </div>
-
-          {aceitaArquivo(tipo) ? (
-            <div className="space-y-2">
-              <Label htmlFor="material-arquivo">{t("Arquivo (opcional)")}</Label>
-              <Input
-                id="material-arquivo"
-                data-testid="material-arquivo"
-                ref={inputArquivo}
-                type="file"
-                accept=".pdf,.md,.txt,.csv"
-                onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
-                disabled={enviando}
-              />
+          {tipo === "catalogo" ? (
+            <div className="rounded-xl border border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-950/20 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400 font-semibold text-sm">
+                <Sparkle size={18} weight="fill" />
+                {t("Sincronização do Catálogo de Produtos e Serviços")}
+              </div>
+              <p className="text-xs text-text-muted leading-relaxed">
+                {t(
+                  "Os produtos e serviços cadastrados no seu Catálogo (com descrições completas, preços, medidas, especificações técnicas e fotos) serão compilados e adicionados diretamente ao acervo de conhecimento do agente.",
+                )}
+              </p>
+              <div className="rounded-lg bg-surface border border-border p-3 text-xs text-text-muted flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Storefront size={16} className="text-indigo-600 dark:text-indigo-400" />
+                  {t("Origem dos dados:")}
+                </span>
+                <span className="font-semibold text-text">{t("Aba CRM > Catálogo")}</span>
+              </div>
               <p className="text-xs text-text-muted">
                 {t(
-                  "PDF, Markdown, CSV ou texto, até 20 MB. Um PDF só de imagens escaneadas não tem letra nenhuma para ler — envie uma versão com texto selecionável. Planilha Excel? Salve como CSV primeiro.",
+                  "O atendente de IA utilizará essas informações para responder com precisão sobre orçamentos, materiais disponíveis e prazos de entrega.",
                 )}
               </p>
             </div>
-          ) : null}
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="material-nome">{t("Nome do material")}</Label>
+                <Input
+                  id="material-nome"
+                  data-testid="material-nome"
+                  placeholder={tipo === "faq" ? t("Perguntas frequentes da loja") : t("Política de troca")}
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  disabled={enviando || porRotina}
+                />
+              </div>
 
-          {!porRotina && !arquivo ? (
-            <div className="space-y-2">
-              <Label htmlFor="material-conteudo">
-                {aceitaArquivo(tipo) ? t("…ou cole o texto aqui") : t("Conteúdo")}
-              </Label>
-              <Textarea
-                id="material-conteudo"
-                data-testid="material-conteudo"
-                rows={10}
-                placeholder={ePerguntaEResposta(tipo) ? EXEMPLO_FAQ : EXEMPLO_DOCUMENTO}
-                value={conteudo}
-                onChange={(e) => setConteudo(e.target.value)}
-                disabled={enviando}
-              />
-              {ePerguntaEResposta(tipo) ? (
-                <p className="text-xs text-text-muted">
-                  {t("Uma linha")} <code>## Pergunta:</code> {t("e uma")}{" "}
-                  <code>## Resposta:</code> {t("por item, separados por uma linha em branco.")}
-                </p>
+              {aceitaArquivo(tipo) ? (
+                <div className="space-y-2">
+                  <Label htmlFor="material-arquivo">{t("Arquivo (opcional)")}</Label>
+                  <Input
+                    id="material-arquivo"
+                    data-testid="material-arquivo"
+                    ref={inputArquivo}
+                    type="file"
+                    accept=".pdf,.md,.txt,.csv"
+                    onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+                    disabled={enviando}
+                  />
+                  <p className="text-xs text-text-muted">
+                    {t(
+                      "PDF, Markdown, CSV ou texto, até 20 MB. Um PDF só de imagens escaneadas não tem letra nenhuma para ler — envie uma versão com texto selecionável. Planilha Excel? Salve como CSV primeiro.",
+                    )}
+                  </p>
+                </div>
               ) : null}
-            </div>
-          ) : null}
+
+              {!porRotina && !arquivo ? (
+                <div className="space-y-2">
+                  <Label htmlFor="material-conteudo">
+                    {aceitaArquivo(tipo) ? t("…ou cole o texto aqui") : t("Conteúdo")}
+                  </Label>
+                  <Textarea
+                    id="material-conteudo"
+                    data-testid="material-conteudo"
+                    rows={10}
+                    placeholder={ePerguntaEResposta(tipo) ? EXEMPLO_FAQ : EXEMPLO_DOCUMENTO}
+                    value={conteudo}
+                    onChange={(e) => setConteudo(e.target.value)}
+                    disabled={enviando}
+                  />
+                  {ePerguntaEResposta(tipo) ? (
+                    <p className="text-xs text-text-muted">
+                      {t("Uma linha")} <code>## Pergunta:</code> {t("e uma")}{" "}
+                      <code>## Resposta:</code> {t("por item, separados por uma linha em branco.")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </>
+          )}
 
           {!podeIndexar ? (
             <p className="text-xs text-warning-fg" data-testid="material-aviso-sem-chave">
@@ -255,8 +305,20 @@ export function NovoMaterialDialog({ aberto, onFechar, onCriado, podeIndexar }: 
           <Button variant="outline" onClick={onFechar} disabled={enviando}>
             {t("Cancelar")}
           </Button>
-          <Button onClick={criar} disabled={enviando || porRotina} data-testid="material-criar">
-            {enviando ? t("Guardando…") : t("Adicionar ao acervo")}
+          <Button
+            variant="primary"
+            onClick={criar}
+            disabled={enviando || (porRotina && tipo !== "catalogo")}
+            data-testid="material-criar"
+            className="cursor-pointer font-bold shadow-xs"
+          >
+            {enviando
+              ? tipo === "catalogo"
+                ? t("Sincronizando Catálogo…")
+                : t("Guardando…")
+              : tipo === "catalogo"
+                ? t("Sincronizar Catálogo no Acervo")
+                : t("Adicionar ao acervo")}
           </Button>
         </DialogFooter>
       </DialogContent>

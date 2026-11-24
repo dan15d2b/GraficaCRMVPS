@@ -141,16 +141,24 @@ describe("NovoMaterialDialog — o tipo escolhido é o tipo enviado", () => {
     expect(corpoEnviado(spy)).toMatchObject({ source_type: "documento" });
   });
 
-  for (const tipo of ["conversas", "catalogo"] as const) {
-    it(`"${tipo}" não pode ser cadastrado à mão — ele é preenchido por rotina`, () => {
-      render(
-        <NovoMaterialDialog aberto onFechar={() => {}} onCriado={() => {}} podeIndexar />,
-      );
-      // Desabilitado, e não ausente: sumir com a opção esconderia que o material
-      // EXISTE e chega sozinho — que é a informação que a pessoa precisa.
-      expect(screen.getByTestId(`material-tipo-${tipo}`)).toBeDisabled();
-    });
-  }
+  it('"conversas" não pode ser cadastrado à mão — ele é preenchido por rotina', () => {
+    render(
+      <NovoMaterialDialog aberto onFechar={() => {}} onCriado={() => {}} podeIndexar />,
+    );
+    expect(screen.getByTestId("material-tipo-conversas")).toBeDisabled();
+  });
+
+  it('"catalogo" pode ser sincronizado diretamente pelo diálogo', async () => {
+    const spy = dublarFetch();
+    render(
+      <NovoMaterialDialog aberto onFechar={() => {}} onCriado={() => {}} podeIndexar />,
+    );
+    fireEvent.click(screen.getByTestId("material-tipo-catalogo"));
+    expect(screen.getByText(/Sincronização do Catálogo/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("material-criar"));
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+    expect(spy.mock.calls[0]?.[0]).toBe("/api/v1/ai/knowledge/sync-catalog");
+  });
 
   it("sem chave, o diálogo DIZ que o material vai ficar esperando", () => {
     render(
