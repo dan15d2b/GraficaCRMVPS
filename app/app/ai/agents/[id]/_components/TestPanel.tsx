@@ -11,7 +11,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Sparkle, Storefront, PencilSimple, CheckCircle, ArrowCounterClockwise } from "@/lib/ui/icons";
+import { Sparkle, Storefront, PencilSimple, CheckCircle, ArrowsClockwise } from "@/lib/ui/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -402,7 +402,7 @@ export function TestPanel({ agent, draft, published, readOnly, channelSessions }
                     onClick={() => setChatHistory([])}
                     title={t("Limpar conversa de teste")}
                   >
-                    <ArrowCounterClockwise size={16} />
+                    <ArrowsClockwise size={16} />
                   </Button>
                 )}
               </div>
