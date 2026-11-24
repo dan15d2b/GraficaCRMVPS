@@ -539,6 +539,10 @@ export type LinhaDaInstalacao = {
    * caso de TODA linha gravada antes desta coluna.
    */
   readonly accent_dark_hex?: string | null;
+  /** Cor personalizada de fundo da barra lateral (Sidebar) */
+  readonly sidebar_color?: string | null;
+  /** Cor personalizada da barra lateral no tema escuro (opcional) */
+  readonly sidebar_dark_color?: string | null;
 };
 
 /**
@@ -644,6 +648,10 @@ export type MarcaDaOrganizacao = {
    * motivo de `logo_dark_path` (kit self-host com código velho sobre dado novo).
    */
   readonly accent_dark_hex?: string | null;
+  /** Cor personalizada de fundo da barra lateral (Sidebar) */
+  readonly sidebar_color?: string | null;
+  /** Cor personalizada da barra lateral no tema escuro (opcional) */
+  readonly sidebar_dark_color?: string | null;
   /**
    * O NOME de exibição e o "responder para" do e-mail que a AUTOMAÇÃO manda ao
    * cliente final (#3287, fatia 1).

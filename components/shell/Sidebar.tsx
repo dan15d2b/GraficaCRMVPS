@@ -17,6 +17,7 @@ import { marcaEhADoProduto } from "@/lib/branding";
 import { useMarcaDaInstalacao } from "@/lib/branding/contexto";
 import { GRUPO_NO_RODAPE, sidebarGroups } from "@/lib/navigation/registry";
 import { usePrefetchPorIntencao } from "@/hooks/navigation/prefetchPorIntencao";
+import { eFundoEscuro } from "@/lib/branding/contraste";
 
 const CHAVE_GRUPOS_FECHADOS = "sidebar-grupos-fechados";
 
@@ -24,6 +25,7 @@ interface SidebarContentProps {
   collapsed: boolean;
   showCollapseControl?: boolean;
   onNavigate?: () => void;
+  isLightBgDark?: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export function SidebarContent({
   collapsed,
   showCollapseControl = true,
   onNavigate,
+  isLightBgDark: propIsLightBgDark,
 }: SidebarContentProps) {
   // A barra lateral aparece em TODA tela — traduzi-la aqui é o que faz a
   // escolha de idioma virar algo visível no primeiro clique.
@@ -45,6 +48,7 @@ export function SidebarContent({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const { user, activeOrg } = useAuth();
+  const isLightBgDark = propIsLightBgDark ?? eFundoEscuro(activeOrg?.marca?.sidebarColor || "#1e0850");
   /**
    * O menu não prefetcha sozinho (#3170): um render RSC por link do menu (19
    * destinos × as duas instâncias, lateral e móvel), e eles disputam o servidor
@@ -152,7 +156,8 @@ export function SidebarContent({
     <>
       <div
         className={cn(
-          "flex h-14 items-center border-b border-indigo-900/30 px-4 dark:border-border",
+          "flex h-14 items-center border-b px-4",
+          isLightBgDark ? "border-indigo-900/30 dark:border-border" : "border-slate-200 dark:border-border",
           collapsed ? "justify-center" : "justify-start",
         )}
       >
@@ -249,6 +254,7 @@ export function SidebarContent({
               collapsed={false}
               isPending={isPending}
               soIcone
+              isLightBgDark={isLightBgDark}
               onClick={() => startTransition(() => toggleSidebar(collapsed))}
             />
           </div>
@@ -257,10 +263,11 @@ export function SidebarContent({
       {/* Issue #2722 — no trilho recolhido (64px) não cabe controle ao lado
           do símbolo: ele vira uma faixa imediatamente abaixo da marca. */}
       {showCollapseControl && collapsed && (
-        <div className="border-b px-2 py-1">
+        <div className={cn("border-b px-2 py-1", isLightBgDark ? "border-indigo-900/30 dark:border-border" : "border-slate-200 dark:border-border")}>
           <BotaoDeRecolher
             collapsed
             isPending={isPending}
+            isLightBgDark={isLightBgDark}
             onClick={() => startTransition(() => toggleSidebar(collapsed))}
           />
         </div>
@@ -340,14 +347,18 @@ export function SidebarContent({
                     type="button"
                     onClick={() => toggleGrupo(group.id)}
                     aria-expanded={aberto}
-                    className="flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-semibold tracking-wider text-indigo-200/70 uppercase transition-colors hover:text-white dark:text-muted-foreground dark:hover:bg-accent/40 dark:hover:text-foreground"
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-semibold tracking-wider uppercase transition-colors dark:text-muted-foreground dark:hover:bg-accent/40 dark:hover:text-foreground",
+                      isLightBgDark ? "text-indigo-200/70 hover:text-white" : "text-slate-500 hover:text-slate-900",
+                    )}
                   >
                     {t(group.label)}
                     <CaretDown
                       size={12}
                       weight="bold"
                       className={cn(
-                        "shrink-0 text-indigo-300/70 transition-transform dark:text-text-subtle",
+                        "shrink-0 transition-transform dark:text-text-subtle",
+                        isLightBgDark ? "text-indigo-300/70" : "text-slate-400",
                         !aberto && "-rotate-90",
                       )}
                       aria-hidden
@@ -375,8 +386,12 @@ export function SidebarContent({
                           className={cn(
                             "relative flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
                             isActive
-                              ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
-                              : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
+                              ? isLightBgDark
+                                ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                                : "bg-slate-900 text-white shadow-xs font-bold dark:bg-accent dark:text-accent-foreground"
+                              : isLightBgDark
+                                ? "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground"
+                                : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
                             collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
                           )}
                         >
@@ -407,8 +422,12 @@ export function SidebarContent({
                         className={cn(
                           "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
                           pathname === group.hub.href
-                            ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
-                            : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
+                            ? isLightBgDark
+                              ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                              : "bg-slate-900 text-white shadow-xs font-bold dark:bg-accent dark:text-accent-foreground"
+                            : isLightBgDark
+                              ? "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground"
+                              : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
                       >
@@ -423,7 +442,10 @@ export function SidebarContent({
           );
         })}
       </nav>
-      <div className="border-t border-indigo-900/30 px-2 py-1 dark:border-border">
+      <div className={cn(
+        "border-t px-2 py-1 dark:border-border",
+        isLightBgDark ? "border-indigo-900/30" : "border-slate-200"
+      )}>
         {rodape && (
           <Link
             href={rodape.href}
@@ -434,8 +456,12 @@ export function SidebarContent({
             className={cn(
               "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
               pathname.startsWith(rodape.href)
-                ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
-                : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
+                ? isLightBgDark
+                  ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                  : "bg-slate-900 text-white shadow-xs font-bold dark:bg-accent dark:text-accent-foreground"
+                : isLightBgDark
+                  ? "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground"
+                  : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
               collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
             )}
           >
@@ -457,8 +483,12 @@ export function SidebarContent({
             className={cn(
               "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
               pathname.startsWith(ajuda.href)
-                ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
-                : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
+                ? isLightBgDark
+                  ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                  : "bg-slate-900 text-white shadow-xs font-bold dark:bg-accent dark:text-accent-foreground"
+                : isLightBgDark
+                  ? "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground"
+                  : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
               collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
             )}
           >
@@ -484,6 +514,7 @@ function BotaoDeRecolher({
   isPending,
   onClick,
   soIcone = false,
+  isLightBgDark = true,
 }: {
   collapsed: boolean;
   isPending: boolean;
@@ -497,6 +528,7 @@ function BotaoDeRecolher({
    * e o `title` cobre o hover para quem só enxerga o desenho.
    */
   soIcone?: boolean;
+  isLightBgDark?: boolean;
 }) {
   const t = useT();
   // Um rótulo só para `aria-label` e `title`: os dois nomeiam a MESMA ação.
@@ -507,7 +539,10 @@ function BotaoDeRecolher({
       onClick={onClick}
       disabled={isPending}
       className={cn(
-        "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground transition-colors",
+        "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs transition-colors",
+        isLightBgDark
+          ? "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground"
+          : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900 dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
         (collapsed || soIcone) && "justify-center px-2",
       )}
       aria-label={rotulo}
@@ -524,14 +559,31 @@ function BotaoDeRecolher({
 }
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
+  const { activeOrg } = useAuth();
+  const customColor = activeOrg?.marca?.sidebarColor;
+  const customDarkColor = activeOrg?.marca?.sidebarDarkColor;
+
+  const lightBg = customColor || "#1e0850";
+  const darkBg = customDarkColor || (customColor && eFundoEscuro(customColor) ? customColor : null);
+  const isLightBgDark = eFundoEscuro(lightBg);
+
   return (
     <aside
+      style={{
+        ["--sidebar-custom-bg" as string]: lightBg,
+        ...(darkBg ? { ["--sidebar-custom-dark-bg" as string]: darkBg } : {}),
+      }}
       className={cn(
-        "sticky top-[var(--faixas-de-cima,0px)] z-30 flex h-[calc(100dvh-var(--faixas-de-cima,0px))] shrink-0 flex-col border-r bg-[#1e0850] text-white border-indigo-950/40 dark:bg-card dark:text-foreground dark:border-border transition-[width] duration-base",
+        "sticky top-[var(--faixas-de-cima,0px)] z-30 flex h-[calc(100dvh-var(--faixas-de-cima,0px))] shrink-0 flex-col border-r transition-[width] duration-base",
         collapsed ? "w-16" : "w-60",
+        "bg-[var(--sidebar-custom-bg)]",
+        darkBg ? "dark:bg-[var(--sidebar-custom-dark-bg)]" : "dark:bg-card dark:text-foreground dark:border-border",
+        isLightBgDark
+          ? "text-white border-indigo-950/40"
+          : "text-slate-800 border-slate-200",
       )}
     >
-      <SidebarContent collapsed={collapsed} />
+      <SidebarContent collapsed={collapsed} isLightBgDark={isLightBgDark} />
     </aside>
   );
 }

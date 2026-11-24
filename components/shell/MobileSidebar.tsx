@@ -7,6 +7,8 @@ import { useT } from "@/hooks/i18n/useT";
 import { SidebarContent } from "@/components/shell/Sidebar";
 import { DotsThree, List } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import { eFundoEscuro } from "@/lib/branding/contraste";
 
 /**
  * A gaveta de navegação do celular.
@@ -45,6 +47,12 @@ import { cn } from "@/lib/utils";
 export function GavetaDeNavegacao({ comoAba = false }: { comoAba?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const { activeOrg } = useAuth();
+  const customColor = activeOrg?.marca?.sidebarColor;
+  const customDarkColor = activeOrg?.marca?.sidebarDarkColor;
+  const lightBg = customColor || "#1e0850";
+  const darkBg = customDarkColor || (customColor && eFundoEscuro(customColor) ? customColor : null);
+  const isLightBgDark = eFundoEscuro(lightBg);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -77,13 +85,23 @@ export function GavetaDeNavegacao({ comoAba = false }: { comoAba?: boolean }) {
       </SheetTrigger>
       <SheetContent
         side="left"
-        className="flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 p-0 sm:max-w-xs [&_a]:min-h-11 [&_h2>button]:min-h-11"
+        style={{
+          ["--sidebar-custom-bg" as string]: lightBg,
+          ...(darkBg ? { ["--sidebar-custom-dark-bg" as string]: darkBg } : {}),
+        }}
+        className={cn(
+          "flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-0 p-0 sm:max-w-xs [&_a]:min-h-11 [&_h2>button]:min-h-11",
+          "bg-[var(--sidebar-custom-bg)]",
+          darkBg ? "dark:bg-[var(--sidebar-custom-dark-bg)]" : "dark:bg-card dark:text-foreground dark:border-border",
+          isLightBgDark ? "text-white border-indigo-950/40" : "text-slate-800 border-slate-200",
+        )}
       >
         <SheetTitle className="sr-only">{t("Navegação principal")}</SheetTitle>
         <SidebarContent
           collapsed={false}
           showCollapseControl={false}
           onNavigate={() => setOpen(false)}
+          isLightBgDark={isLightBgDark}
         />
       </SheetContent>
     </Sheet>

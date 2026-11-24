@@ -116,6 +116,15 @@ export function melhorFrenteSobre(fundo: string): string {
   return escolheAFrente(fundo);
 }
 
+/**
+ * Indica se a cor de fundo é considerada escura segundo contraste WCAG
+ * (ou seja, se a melhor cor de frente para legibilidade é branco).
+ */
+export function eFundoEscuro(fundo?: string | null): boolean {
+  if (!fundo || !ehHexValido(fundo)) return true;
+  return escolheAFrente(fundo) === "#ffffff";
+}
+
 // ── Dicromacia (Machado, Oliveira & Fernandes 2009 — severidade 1.0) ─────────
 
 /**

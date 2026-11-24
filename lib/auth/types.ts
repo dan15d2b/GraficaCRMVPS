@@ -331,5 +331,7 @@ export interface ActiveOrg {
     readonly nome?: string;
     readonly logoUrl?: string | null;
     readonly logoDarkUrl?: string | null;
+    readonly sidebarColor?: string | null;
+    readonly sidebarDarkColor?: string | null;
   };
 }

@@ -68,6 +68,9 @@ interface Props {
     readonly accent_hex: string | null;
     /** A cor do TEMA ESCURO (#2482) — o par; `null` = só a cor acima pinta. */
     readonly accent_dark_hex: string | null;
+    /** Cor personalizada da barra lateral */
+    readonly sidebar_color?: string | null;
+    readonly sidebar_dark_color?: string | null;
     readonly logo_path: string | null;
     readonly logo_dark_path: string | null;
     /**
@@ -188,6 +191,8 @@ export function FormularioDaMarcaDaOrganizacao({ gravada, contaResend, instalaca
   const [nome, setNome] = useState(gravada.app_name ?? "");
   const [hex, setHex] = useState(gravada.accent_hex ?? "");
   const [hexEscuro, setHexEscuro] = useState(gravada.accent_dark_hex ?? "");
+  const [sidebarColor, setSidebarColor] = useState(gravada.sidebar_color ?? "");
+  const [sidebarDarkColor, setSidebarDarkColor] = useState(gravada.sidebar_dark_color ?? "");
   // O remetente do e-mail de AUTOMAÇÃO (#3287, fatia 1). Fora da pilha de marca
   // de propósito: ele não pinta tela nenhuma, então não entra no `resolverMarca`
   // nem na prévia — só no `Salvar`.
@@ -210,6 +215,10 @@ export function FormularioDaMarcaDaOrganizacao({ gravada, contaResend, instalaca
   const hexValido = hexLimpo.length === 0 || ehHexValido(hexLimpo);
   const hexEscuroLimpo = hexEscuro.trim();
   const hexEscuroValido = hexEscuroLimpo.length === 0 || ehHexValido(hexEscuroLimpo);
+  const sidebarColorLimpo = sidebarColor.trim();
+  const sidebarColorValido = sidebarColorLimpo.length === 0 || ehHexValido(sidebarColorLimpo);
+  const sidebarDarkColorLimpo = sidebarDarkColor.trim();
+  const sidebarDarkColorValido = sidebarDarkColorLimpo.length === 0 || ehHexValido(sidebarDarkColorLimpo);
   const remetenteNomeLimpo = remetenteNome.trim();
   const responderParaLimpo = responderPara.trim();
   // Mesmo piso do schema (`marcaDaOrganizacaoSchema`) — a tela avisa antes de
@@ -327,6 +336,8 @@ export function FormularioDaMarcaDaOrganizacao({ gravada, contaResend, instalaca
       app_name: nomeLimpo.length > 0 ? nomeLimpo : null,
       accent_hex: hexLimpo.length > 0 ? hexLimpo : null,
       accent_dark_hex: hexEscuroLimpo.length > 0 ? hexEscuroLimpo : null,
+      sidebar_color: sidebarColorLimpo.length > 0 ? sidebarColorLimpo : null,
+      sidebar_dark_color: sidebarDarkColorLimpo.length > 0 ? sidebarDarkColorLimpo : null,
       // O remetente da automação (#3287, fatia 1). Vão SEMPRE, mesmo quando a
       // pessoa só mexeu na cor: o `Save` da marca substitui o objeto `branding`
       // inteiro (só o `logo_path` é preservado no banco), então omitir um campo
@@ -530,6 +541,147 @@ export function FormularioDaMarcaDaOrganizacao({ gravada, contaResend, instalaca
           </div>
           <p id="ajuda-da-cor-escura-da-organizacao" className="text-xs text-text-muted">
             {t("Deixe em branco para os dois modos usarem a cor acima.")}
+          </p>
+        </div>
+
+        {/*
+          Cor personalizada da BARRA LATERAL (Sidebar).
+          Permite ao cliente escolher a cor de fundo do menu lateral com atalhos visuais.
+        */}
+        <div className="space-y-3 pt-3 border-t border-border">
+          <div>
+            <Label htmlFor="org_sidebar_color" className="text-sm font-medium">
+              {t("Cor de fundo da barra lateral (Menu)")}
+            </Label>
+            <p className="text-xs text-text-muted mt-0.5">
+              {t("Personalize a cor do menu lateral. Deixe em branco para usar o padrão.")}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label
+              className="relative h-10 w-10 shrink-0 cursor-pointer overflow-hidden rounded-sm border border-border"
+              style={{
+                backgroundColor: ehHexValido(sidebarColorLimpo)
+                  ? normalizarHex(sidebarColorLimpo)
+                  : "#1e0850",
+              }}
+            >
+              <span className="sr-only">{t("Escolher a cor da barra lateral visualmente")}</span>
+              <input
+                type="color"
+                value={
+                  ehHexValido(sidebarColorLimpo)
+                    ? normalizarHex(sidebarColorLimpo)
+                    : "#1e0850"
+                }
+                onChange={(e) => setSidebarColor(e.target.value)}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
+            <Input
+              id="org_sidebar_color"
+              value={sidebarColor}
+              onChange={(e) => setSidebarColor(e.target.value)}
+              placeholder="#1e0850"
+              spellCheck={false}
+              autoComplete="off"
+              aria-invalid={!sidebarColorValido}
+              className="w-36 font-mono"
+            />
+            {sidebarColorLimpo.length > 0 && !sidebarColorValido ? (
+              <span className="text-sm text-error-fg">
+                {t("Use um código de cor como #1e0850.")}
+              </span>
+            ) : null}
+          </div>
+
+          {/* Atalhos com opções prontas */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-xs text-text-muted mr-1">{t("Cores prontas:")}</span>
+            {[
+              { label: "Índigo Real", hex: "#1e0850" },
+              { label: "Grafite Slate", hex: "#0f172a" },
+              { label: "Midnight", hex: "#090b10" },
+              { label: "Azul Noturno", hex: "#1e1b4b" },
+              { label: "Slate Escuro", hex: "#1e293b" },
+              { label: "Branco", hex: "#ffffff" },
+            ].map((preset) => (
+              <button
+                key={preset.hex}
+                type="button"
+                onClick={() => setSidebarColor(preset.hex)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer",
+                  sidebarColor.toLowerCase() === preset.hex.toLowerCase()
+                    ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
+                    : "border-border bg-surface hover:bg-surface-elevated text-text"
+                )}
+              >
+                <span
+                  className="h-3 w-3 rounded-full border border-black/10 shrink-0"
+                  style={{ backgroundColor: preset.hex }}
+                />
+                {preset.label}
+              </button>
+            ))}
+            {sidebarColor ? (
+              <button
+                type="button"
+                onClick={() => setSidebarColor("")}
+                className="text-xs text-text-muted hover:text-text underline ml-1 cursor-pointer"
+              >
+                {t("Limpar")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Cor da barra lateral no tema escuro (opcional) */}
+        <div className="space-y-2">
+          <Label htmlFor="org_sidebar_dark_color">
+            {t("Cor da barra lateral no tema escuro (opcional)")}
+          </Label>
+          <div className="flex items-center gap-3">
+            <label
+              className="relative h-10 w-10 shrink-0 cursor-pointer overflow-hidden rounded-sm border border-border"
+              style={{
+                backgroundColor: ehHexValido(sidebarDarkColorLimpo)
+                  ? normalizarHex(sidebarDarkColorLimpo)
+                  : COR_NEUTRA_DO_SELETOR,
+              }}
+            >
+              <span className="sr-only">{t("Escolher a cor escura da barra lateral visualmente")}</span>
+              <input
+                type="color"
+                value={
+                  ehHexValido(sidebarDarkColorLimpo)
+                    ? normalizarHex(sidebarDarkColorLimpo)
+                    : COR_NEUTRA_DO_SELETOR
+                }
+                onChange={(e) => setSidebarDarkColor(e.target.value)}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
+            <Input
+              id="org_sidebar_dark_color"
+              value={sidebarDarkColor}
+              onChange={(e) => setSidebarDarkColor(e.target.value)}
+              placeholder="#090b10"
+              spellCheck={false}
+              autoComplete="off"
+              aria-invalid={!sidebarDarkColorValido}
+              aria-describedby="ajuda-da-cor-escura-da-sidebar"
+              className="w-36 font-mono"
+            />
+            {sidebarDarkColorLimpo.length > 0 && !sidebarDarkColorValido ? (
+              <span className="text-sm text-error-fg">
+                {t("Use um código de cor como #090b10.")}
+              </span>
+            ) : null}
+          </div>
+          <p id="ajuda-da-cor-escura-da-sidebar" className="text-xs text-text-muted">
+            {t("Deixe em branco para acompanhar a cor da barra lateral.")}
           </p>
         </div>
 

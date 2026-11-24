@@ -127,6 +127,8 @@ export async function updateMarcaDaOrganizacao(
     parsed.data.app_name === null &&
     parsed.data.accent_hex === null &&
     parsed.data.accent_dark_hex === null &&
+    (parsed.data.sidebar_color === null || parsed.data.sidebar_color === undefined) &&
+    (parsed.data.sidebar_dark_color === null || parsed.data.sidebar_dark_color === undefined) &&
     parsed.data.email_from_name === null &&
     parsed.data.email_reply_to === null;
   const marca = limpar
@@ -144,6 +146,10 @@ export async function updateMarcaDaOrganizacao(
           parsed.data.accent_dark_hex === null
             ? null
             : normalizarHex(parsed.data.accent_dark_hex),
+        sidebar_color:
+          parsed.data.sidebar_color ? normalizarHex(parsed.data.sidebar_color) : null,
+        sidebar_dark_color:
+          parsed.data.sidebar_dark_color ? normalizarHex(parsed.data.sidebar_dark_color) : null,
         // O remetente da automação (#3287, fatia 1). Texto livre: a função SQL
         // não os valida (só `accent_hex`), então quem garantiu a forma foi o
         // `marcaDaOrganizacaoSchema` acima — o endereço de resposta, inclusive.

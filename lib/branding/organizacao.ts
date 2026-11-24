@@ -82,6 +82,8 @@ export function marcaDaOrganizacaoDeSettings(settings: unknown): MarcaDaOrganiza
     // vira chave quando é string — um `accent_dark_hex` numérico desceria para
     // `envelopeDeSemente` e apontaria o campo errado no diagnóstico.
     ...(texto(envelope.accent_dark_hex) ? { accent_dark_hex: texto(envelope.accent_dark_hex) } : {}),
+    ...(texto(envelope.sidebar_color) ? { sidebar_color: texto(envelope.sidebar_color) } : {}),
+    ...(texto(envelope.sidebar_dark_color) ? { sidebar_dark_color: texto(envelope.sidebar_dark_color) } : {}),
     // Caminho no bucket, nunca URL — quem grava é `fn_definir_logo_da_organizacao`
     // (migration 0158), que assevera o prefixo contra o `organization_id` DENTRO
     // do banco. `texto()` pelo mesmo motivo dos outros dois: um `logo_path` que

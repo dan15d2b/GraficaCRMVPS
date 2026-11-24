@@ -99,6 +99,8 @@ export default async function MarcaDaOrganizacaoPage() {
           app_name: gravada?.app_name ?? null,
           accent_hex: gravada?.accent_hex ?? null,
           accent_dark_hex: gravada?.accent_dark_hex ?? null,
+          sidebar_color: gravada?.sidebar_color ?? null,
+          sidebar_dark_color: gravada?.sidebar_dark_color ?? null,
           // O CAMINHO no bucket, não a URL: quem converte é `logoDaCamada`, do
           // lado do navegador, com a base do Storage injetada em runtime. Mandar
           // a URL pronta do servidor faria a tela ter uma segunda regra de

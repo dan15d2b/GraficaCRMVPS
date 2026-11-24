@@ -256,8 +256,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // `settings.branding.logo_path`. A condição foi escrita aqui uma onda ANTES
     // do produtor existir, de propósito — foi o que fez o upload por organização
     // ser só a camada, sem mais uma passada pela casca inteira.
+    const branding = (orgRow?.settings as Record<string, unknown> | null)?.branding as Record<string, unknown> | null;
+    const sidebarColor = typeof branding?.sidebar_color === "string" ? branding.sidebar_color : null;
+    const sidebarDarkColor = typeof branding?.sidebar_dark_color === "string" ? branding.sidebar_dark_color : null;
+
     const marcaDoTenant = {
       logoDarkUrl: marca.logoDarkUrl ?? null,
+      ...(sidebarColor ? { sidebarColor } : {}),
+      ...(sidebarDarkColor ? { sidebarDarkColor } : {}),
       ...(marca.origens.nome === "organizacao" ? { nome: marca.name } : {}),
       ...(marca.origens.logoUrl === "organizacao" && marca.logoUrl !== null
         ? { logoUrl: marca.logoUrl }

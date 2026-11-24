@@ -597,6 +597,20 @@ export const platformBrandingSchema = z.object({
     .trim()
     .refine(ehHexValido, { message: "Use uma cor no formato #rrggbb" })
     .nullable(),
+  /** Cor personalizada de fundo da barra lateral (Sidebar) */
+  sidebar_color: z
+    .string()
+    .trim()
+    .refine(ehHexValido, { message: "Use uma cor no formato #rrggbb" })
+    .nullable()
+    .optional(),
+  /** Cor personalizada da barra lateral no tema escuro (opcional) */
+  sidebar_dark_color: z
+    .string()
+    .trim()
+    .refine(ehHexValido, { message: "Use uma cor no formato #rrggbb" })
+    .nullable()
+    .optional(),
   show_powered_by: z.boolean(),
 });
 export type PlatformBrandingInput = z.infer<typeof platformBrandingSchema>;
@@ -633,6 +647,20 @@ export const marcaDaOrganizacaoSchema = z.object({
     .trim()
     .refine(ehHexValido, { message: "Use uma cor no formato #rrggbb" })
     .nullable(),
+  /** Cor personalizada de fundo da barra lateral (Sidebar) */
+  sidebar_color: z
+    .string()
+    .trim()
+    .refine(ehHexValido, { message: "Use uma cor no formato #rrggbb" })
+    .nullable()
+    .optional(),
+  /** Cor personalizada da barra lateral no tema escuro (opcional) */
+  sidebar_dark_color: z
+    .string()
+    .trim()
+    .refine(ehHexValido, { message: "Use uma cor no formato #rrggbb" })
+    .nullable()
+    .optional(),
   /**
    * O remetente do e-mail de AUTOMAÇÃO da organização (#3287, fatia 1) — o nome
    * de exibição e o "responder para".
