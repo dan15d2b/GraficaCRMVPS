@@ -371,13 +371,13 @@
   --color-overlay: rgba(0, 0, 0, 0.55);
 
   /* Text (dark) */
-  --color-text: #f5f4ef;
-  --color-text-muted: #8e8b7f;
-  --color-text-subtle: #605e54;
+  --color-text: #faf9f6;
+  --color-text-muted: #b8b5a8;
+  --color-text-subtle: #918e82;
 
   /* Borders (dark) */
-  --color-border: #33312a;
-  --color-border-strong: #444239;
+  --color-border: #38362f;
+  --color-border-strong: #4f4c42;
 
   /* ---- Identidade de canal (#4094) -------------------------------------
    * A cor da faixa/ícone que marca DE ONDE veio a mensagem (aviso da esquina
@@ -409,13 +409,13 @@
   --color-accent-hover: var(--color-accent-300);
 
   /* Neutrals — greige (11 stops, dark) */
-  --color-neutral-50: #f5f4ef;
-  --color-neutral-100: #e6e4dc;
-  --color-neutral-200: #bbb8ac;
-  --color-neutral-300: #8e8b7f;
-  --color-neutral-400: #605e54;
-  --color-neutral-500: #444239;
-  --color-neutral-600: #33312a;
+  --color-neutral-50: #faf9f6;
+  --color-neutral-100: #e8e6df;
+  --color-neutral-200: #d2cfc4;
+  --color-neutral-300: #b8b5a8;
+  --color-neutral-400: #918e82;
+  --color-neutral-500: #545147;
+  --color-neutral-600: #38362f;
   --color-neutral-700: #272620;
   --color-neutral-800: #1d1c17;
   --color-neutral-900: #161510;

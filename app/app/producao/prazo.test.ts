@@ -42,6 +42,7 @@ describe("calcularPrazo (Semáforo de Produção)", () => {
 describe("classificarEtapa", () => {
   it("classifica etapa de produção por nome", () => {
     expect(classificarEtapa({ name: "Em produção" })).toBe("producao");
+    expect(classificarEtapa({ name: "Em Produção", is_won: true })).toBe("producao");
     expect(classificarEtapa({ name: "Produção Gráfica" })).toBe("producao");
   });
 

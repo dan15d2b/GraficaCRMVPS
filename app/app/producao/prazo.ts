@@ -11,21 +11,21 @@ export function classificarEtapa(stage: {
   const nome = (stage.name || "").toLowerCase();
   const slug = (stage.slug || "").toLowerCase();
 
+  // 1. Etapas operacionais de produção têm prioridade sobre flags de fechamento (is_won)
   if (
-    stage.is_won ||
-    nome.includes("conclu") ||
-    slug.includes("conclu") ||
-    nome.includes("finaliz") ||
-    slug.includes("finaliz") ||
-    nome.includes("entregue") ||
-    slug.includes("entregue")
+    nome.includes("produç") ||
+    nome.includes("producao") ||
+    slug.includes("producao")
   ) {
-    return "concluido";
+    return "producao";
   }
 
+  // 2. Etapa de retirada no balcão
   if (nome.includes("retirada") || slug.includes("retirada")) {
     return "retirada";
   }
+
+  // 3. Etapa de instalação externa ou entrega em rota
   if (
     nome.includes("instala") ||
     slug.includes("instala") ||
@@ -34,13 +34,20 @@ export function classificarEtapa(stage: {
   ) {
     return "instalacao";
   }
+
+  // 4. Etapa final de conclusão / finalização / entregue ou marcada como ganho
   if (
-    nome.includes("produç") ||
-    nome.includes("producao") ||
-    slug.includes("producao")
+    nome.includes("conclu") ||
+    slug.includes("conclu") ||
+    nome.includes("finaliz") ||
+    slug.includes("finaliz") ||
+    nome.includes("entregue") ||
+    slug.includes("entregue") ||
+    stage.is_won
   ) {
-    return "producao";
+    return "concluido";
   }
+
   return "outro";
 }
 

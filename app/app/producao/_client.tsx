@@ -55,6 +55,7 @@ interface ProducaoClientProps {
 
 type FiltroAba =
   | "todos"
+  | "producao"
   | "atrasado"
   | "urgente"
   | "no_prazo"
@@ -130,7 +131,9 @@ export function ProducaoClient({
     }
 
     // Filtro por aba
-    if (filtroAba === "atrasado") {
+    if (filtroAba === "producao") {
+      resultado = resultado.filter((i) => i.stage_tipo === "producao");
+    } else if (filtroAba === "atrasado") {
       resultado = resultado.filter((i) => i.prazoStatus === "atrasado");
     } else if (filtroAba === "urgente") {
       resultado = resultado.filter(
@@ -199,17 +202,39 @@ export function ProducaoClient({
     setAcaoCarregandoId(item.id);
     try {
       if (destinoTipo === "concluido") {
-        // Tenta encontrar etapa de concluído/ganho do funil
-        const etapaConcluido = etapas.find(
-          (e) => e.pipeline_id === item.pipeline_id && (e.tipo === "concluido" || e.is_won),
-        );
+        // Tenta encontrar etapa de concluído do funil
+        // Prioriza etapa de tipo "concluido" cujo nome contenha "conclu", "finaliz" ou "entregue", evitando escolher "Em Produção"
+        const etapaConcluido =
+          etapas.find(
+            (e) =>
+              e.pipeline_id === item.pipeline_id &&
+              (e.slug.includes("conclu") ||
+                e.name.toLowerCase().includes("conclu") ||
+                e.name.toLowerCase().includes("finaliz") ||
+                e.name.toLowerCase().includes("entregue")),
+          ) ||
+          etapas.find(
+            (e) =>
+              e.pipeline_id === item.pipeline_id &&
+              (e.tipo === "concluido" || e.is_won) &&
+              !e.name.toLowerCase().includes("produ"),
+          );
 
         if (etapaConcluido) {
-          await apiClient.post(`/api/v1/leads/${item.id}/move`, {
-            stage_id: etapaConcluido.id,
-            position_in_stage: 0,
-            expected_updated_at: item.updated_at,
-          });
+          try {
+            await apiClient.post(`/api/v1/leads/${item.id}/move`, {
+              stage_id: etapaConcluido.id,
+              position_in_stage: 0,
+              expected_updated_at: item.updated_at,
+            });
+          } catch {
+            // Fallback resiliente via bulk
+            await apiClient.post("/api/v1/leads/bulk", {
+              action: "move",
+              lead_ids: [item.id],
+              params: { stage_id: etapaConcluido.id },
+            });
+          }
         } else {
           // Se não houver etapa explícita de concluído, encerra como ganho via endpoint canônico
           await apiClient.post(`/api/v1/leads/${item.id}/win`, {});
@@ -414,10 +439,10 @@ export function ProducaoClient({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {/* Total em Produção */}
         <div
-          onClick={() => setFiltroAba("todos")}
+          onClick={() => setFiltroAba(filtroAba === "producao" ? "todos" : "producao")}
           className={`cursor-pointer rounded-lg border p-3 transition-all ${
-            filtroAba === "todos"
-              ? "border-accent bg-accent/5 ring-1 ring-accent"
+            filtroAba === "producao"
+              ? "border-accent bg-accent/15 ring-1 ring-accent"
               : "border-border bg-card hover:border-border/80"
           }`}
         >
@@ -566,6 +591,16 @@ export function ProducaoClient({
             className="h-8 text-xs font-medium"
           >
             Todos ({metricas.totalGeral})
+          </Button>
+
+          <Button
+            variant={filtroAba === "producao" ? "primary" : "ghost"}
+            size="sm"
+            onClick={() => setFiltroAba("producao")}
+            className="h-8 gap-1 text-xs font-medium"
+          >
+            <ClipboardText size={14} />
+            Em Produção ({metricas.totalEmProducao})
           </Button>
 
           <Button
