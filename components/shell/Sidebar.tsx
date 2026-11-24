@@ -152,7 +152,7 @@ export function SidebarContent({
     <>
       <div
         className={cn(
-          "flex h-14 items-center border-b px-4",
+          "flex h-14 items-center border-b border-indigo-900/30 px-4 dark:border-border",
           collapsed ? "justify-center" : "justify-start",
         )}
       >
@@ -340,14 +340,14 @@ export function SidebarContent({
                     type="button"
                     onClick={() => toggleGrupo(group.id)}
                     aria-expanded={aberto}
-                    className="flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+                    className="flex w-full items-center justify-between rounded-md px-3 py-1 text-xs font-semibold tracking-wider text-indigo-200/70 uppercase transition-colors hover:text-white dark:text-muted-foreground dark:hover:bg-accent/40 dark:hover:text-foreground"
                   >
                     {t(group.label)}
                     <CaretDown
                       size={12}
                       weight="bold"
                       className={cn(
-                        "shrink-0 text-text-subtle transition-transform",
+                        "shrink-0 text-indigo-300/70 transition-transform dark:text-text-subtle",
                         !aberto && "-rotate-90",
                       )}
                       aria-hidden
@@ -373,10 +373,10 @@ export function SidebarContent({
                           aria-current={isActive ? "page" : undefined}
                           onClick={onNavigate}
                           className={cn(
-                            "relative flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+                            "relative flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
                             isActive
-                              ? "bg-accent text-accent-foreground"
-                              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                              ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                              : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
                             collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
                           )}
                         >
@@ -405,10 +405,10 @@ export function SidebarContent({
                         aria-current={pathname === group.hub.href ? "page" : undefined}
                         onClick={onNavigate}
                         className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+                          "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
                           pathname === group.hub.href
-                            ? "bg-accent text-accent-foreground"
-                            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                            ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                            : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
                           collapsed && "justify-center px-2",
                         )}
                       >
@@ -423,7 +423,7 @@ export function SidebarContent({
           );
         })}
       </nav>
-      <div className="border-t px-2 py-1">
+      <div className="border-t border-indigo-900/30 px-2 py-1 dark:border-border">
         {rodape && (
           <Link
             href={rodape.href}
@@ -432,10 +432,10 @@ export function SidebarContent({
             aria-current={pathname.startsWith(rodape.href) ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "mb-0.5 flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
               pathname.startsWith(rodape.href)
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
               collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
             )}
           >
@@ -455,10 +455,10 @@ export function SidebarContent({
             aria-current={pathname.startsWith(ajuda.href) ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "mb-0.5 flex items-center gap-3 rounded-md px-3 py-1 text-sm transition-colors",
+              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
               pathname.startsWith(ajuda.href)
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                ? "bg-white text-indigo-800 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
+                : "text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground",
               collapsed && "justify-center px-2 py-2 my-0.5 rounded-lg",
             )}
           >
@@ -507,7 +507,7 @@ function BotaoDeRecolher({
       onClick={onClick}
       disabled={isPending}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+        "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs text-indigo-200/80 hover:bg-white/10 hover:text-white dark:text-muted-foreground dark:hover:bg-accent/50 dark:hover:text-foreground transition-colors",
         (collapsed || soIcone) && "justify-center px-2",
       )}
       aria-label={rotulo}
@@ -527,42 +527,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
     <aside
       className={cn(
-        // ⚠️ `sticky`, e NUNCA `fixed`.
-        //
-        // Com `fixed` a barra sai do fluxo: ela não ocupa lugar nenhum na linha,
-        // e quem afastava o conteúdo era um `md:ml-16`/`md:ml-60` do lado de lá.
-        // Duas medidas para a mesma coisa, em componentes diferentes — e no dia
-        // em que discordassem (largura de 60 com margem de 16), a barra passava
-        // POR CIMA da lista de conversas, escondendo o começo de cada linha.
-        //
-        // Foi assim que apareceu numa instalação real: a barra expandida, com as
-        // etiquetas legíveis, e a lista atrás dela cortada. Um F5 "consertava",
-        // que é a assinatura de servidor e navegador terem pintado estados
-        // diferentes — e `AppShell` e `Sidebar` são ambos `"use client"`.
-        //
-        // `sticky top-0 h-dvh` dá o mesmo efeito visual (a barra não rola com
-        // a página) e ela VOLTA a ocupar lugar: sobra para o conteúdo exatamente
-        // o que ela não usou, e não há segunda medida para discordar.
-        //
-        // `h-dvh` e não `h-screen`: `100vh` é a janela com a barra de endereço
-        // RECOLHIDA, e o navegador nunca corrige esse valor. No tablet entre 768
-        // e 1023px — onde esta barra JÁ aparece, porque a casca a mostra a partir
-        // de `md` — a barra media mais que a janela e o fim dela ficava fora do
-        // alcance. `dvh` acompanha a barra do navegador aparecendo e sumindo.
-        // Princípio 2 de `docs/design-system/screen-flow/07-responsive-strategy.md`.
-        //
-        // O topo e a altura descontam `--faixas-de-cima` (`FaixasDeCima`): as
-        // faixas grudam em `top-0` com z-50, e uma barra em `top-0` passaria
-        // por baixo delas ao rolar — e com `h-dvh` cheio o documento mediria a
-        // tela mais a faixa.
-        //
-        // `shrink-0` porque item de flex encolhe por padrão, e uma barra de 60
-        // espremida para caber é o mesmo defeito por outro caminho.
-        //
-        // `duration-base` em vez do `duration-200` literal: 200ms é o mesmo
-        // número, mas vindo de `--duration-base`. A Lei de movimento fecha a
-        // tabela de durações, e número solto é o que a faz apodrecer.
-        "sticky top-[var(--faixas-de-cima,0px)] z-30 flex h-[calc(100dvh-var(--faixas-de-cima,0px))] shrink-0 flex-col border-r bg-card transition-[width] duration-base",
+        "sticky top-[var(--faixas-de-cima,0px)] z-30 flex h-[calc(100dvh-var(--faixas-de-cima,0px))] shrink-0 flex-col border-r bg-[#1e0850] text-white border-indigo-950/40 dark:bg-card dark:text-foreground dark:border-border transition-[width] duration-base",
         collapsed ? "w-16" : "w-60",
       )}
     >

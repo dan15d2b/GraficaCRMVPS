@@ -427,18 +427,12 @@ export const NAV_CATALOG = [
     // atendente de IA, dentro do Inbox. O humano não abre esta tela para
     // vender — abre para cadastrar o que vende.
     href: "/app/products",
-    label: "Produtos",
-    description: "O catálogo da loja, com o preço que o atendente de IA responde.",
+    label: "Catálogo",
+    description: "Catálogo de produtos e serviços com fotos, especificações e preços.",
     icon: "Storefront",
     group: "crm",
-    section: "Preparar a venda",
-    // SEM `sidebar`: mora atrás de "Ver tudo em CRM".
-    //
-    // O critério é QUEM CONSOME a tela, e a descrição acima já o entrega: o
-    // preço quem responde é o atendente de IA, dentro da conversa. Esta tela é
-    // onde o catálogo se CADASTRA — trabalho de quando entra produto novo ou
-    // muda preço, não de toda manhã. Quem atende não a abre para vender; abre o
-    // Inbox e o funil, que continuam no menu.
+    section: "O dia a dia da venda",
+    sidebar: true,
   },
   {
     href: "/app/imports",

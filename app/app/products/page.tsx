@@ -22,7 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProdutosClient } from "./_client";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Produtos" };
+export const metadata: Metadata = { title: "Catálogo" };
 
 /**
  * O CATÁLOGO DA LOJA — onde o preço que a IA responde é cadastrado.
@@ -125,13 +125,13 @@ export default async function ProdutosPage({
       podeEditar={podeEditar}
       apresentacaoLigada={await apresentacaoDoCatalogoLigada(createAdminClient(), activeOrg.orgId)}
       textos={{
-        titulo: t("Produtos"),
+        titulo: t("Catálogo de Produtos"),
         subtitulo: t(
-          "O catálogo da loja. É daqui que o atendente de IA tira o preço quando alguém pergunta.",
+          "Catálogo de produtos e serviços da loja. É daqui que o atendente de IA tira informações, fotos e preços para atender os clientes.",
         ),
-        vazio: t("Nenhum produto cadastrado ainda"),
+        vazio: t("Nenhum item cadastrado no catálogo ainda"),
         vazioDica: t(
-          "Enquanto o catálogo estiver vazio, o atendente responde que não encontrou o produto — mesmo que a loja tenha.",
+          "Cadastre seus produtos e serviços com fotos e descrições para que o atendente de IA possa apresentar e enviar aos clientes no WhatsApp.",
         ),
       }}
     />

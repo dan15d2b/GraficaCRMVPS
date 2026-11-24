@@ -370,8 +370,8 @@ export function MessageBubble({
                 // terminar antes dela, inclusive quando o cartão encolhe.
                 temMenu && cartaoDeDocumentoVisivel && "pointer-coarse:pr-12 pointer-coarse:max-w-[85%]",
                 isOutbound
-                  ? "rounded-br-sm bg-primary text-primary-foreground"
-                  : "rounded-bl-sm bg-muted text-foreground",
+                  ? "rounded-br-sm bg-primary text-primary-foreground shadow-sm"
+                  : "rounded-bl-sm bg-muted text-foreground border border-border/40 shadow-sm",
               ),
           // O pulo da agenda não é falha: o selo diz isso, e a moldura de erro
           // diria o contrário (#3850).

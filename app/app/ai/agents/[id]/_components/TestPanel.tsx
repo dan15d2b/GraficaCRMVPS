@@ -1,15 +1,17 @@
 "use client";
 /**
- * TestPanel — dry-run de uma version (S-13.12).
+ * TestPanel — dry-run e treinamento interativo do agente.
  *
  * Envia sample message via POST `:test` (admin-only). Renderiza trace +
- * "Mensagem que SERIA enviada". Não toca WAHA, não cria messages.outbound.
- * Quando `INTERNAL_AGENT_RUN_STUB=true` o backend devolve trace stub com
- * `stub: true`; o componente mostra um aviso amigável.
+ * simulação de chat interativo com botão "Ensinar o Agente / Corrigir Resposta",
+ * que grava Q&A diretamente no conhecimento do agente.
+ * Inclui também o botão "Sincronizar Catálogo no Agente" para alimentar o agente
+ * com todos os produtos e especificações da loja.
  */
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Sparkle, Storefront, PencilSimple, CheckCircle, ArrowCounterClockwise } from "@/lib/ui/icons";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,14 +42,6 @@ interface Props {
   draft: AgentVersionRow | null;
   published: AgentVersionRow | null;
   readOnly?: boolean;
-  /**
-   * Os canais da organização, para o modo de teste do canal DESTA versão.
-   *
-   * Vem por prop do mesmo jeito que no editor: o resumo (`acessoDaAi`) já chega
-   * pronto de `listSelectableChannels`, e a lista de telefones só é buscada por
-   * quem pode ver (administrador). Sem isso, o teste da aba dava resposta verde
-   * para um número que o WhatsApp real nunca atenderia (#3976).
-   */
   channelSessions?: ChannelSessionLite[];
 }
 
@@ -66,16 +60,10 @@ interface TestResponse {
     candidates?: Array<{ body: string; trace: Array<{ gate: string; verdict: string }> }>;
     proposals?: Array<{ tool: string; arguments: unknown }>;
     impediments?: Array<{ code: string; message: string }>;
-    /**
-     * Não bloqueiam o teste: dizem o que impediria o ENVIO real agora (ex.: fora
-     * do horário). Ver `gatesDoSandbox` em lib/agent-engine/agent/preview.ts.
-     */
     warnings?: Array<{ code: string; message: string }>;
     restrictions?: string[];
-    /** Ver lib/ai/agents/avaliar-resposta-de-teste.ts. */
     guardrails?: {
       passou: boolean;
-      /** false = não havia texto para avaliar (teste sem resposta). */
       avaliado?: boolean;
       categorias: string[];
       termos: string[];
@@ -84,19 +72,22 @@ interface TestResponse {
   };
 }
 
-/**
- * O que as verificações disseram sobre a resposta — e o que elas NÃO puderam
- * dizer.
- *
- * Este componente mostra o resultado da checagem textual suplementar. O motor
- * de prévia executa verificações próprias com contexto simulado; nenhuma delas
- * é prova de que o envio real esteja liberado.
- */
+interface ChatItem {
+  id: string;
+  role: "user" | "agent";
+  text: string;
+  question?: string;
+  latencyMs?: number;
+  tokens?: string;
+  toolCalls?: unknown;
+  guardrails?: TestResponse["data"]["guardrails"];
+  corrected?: boolean;
+}
+
 function Verificacoes({ g }: { g: NonNullable<TestResponse["data"]["guardrails"]> }) {
   const t = useT();
   return (
     <div className="space-y-2" data-testid="teste-verificacoes">
-      {/* Sem texto não há veredito: nem "limpo", nem "vazou". */}
       {g.avaliado === false ? null : g.passou ? (
         <p
           data-testid="teste-vazamento-limpo"
@@ -119,7 +110,6 @@ function Verificacoes({ g }: { g: NonNullable<TestResponse["data"]["guardrails"]
         </div>
       )}
 
-      {/* Esta lista descreve somente o alcance da checagem textual adicional. */}
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer" data-testid="teste-nao-verificado">
           {t("A checagem textual não reavalia todas as regras (")}
@@ -130,12 +120,6 @@ function Verificacoes({ g }: { g: NonNullable<TestResponse["data"]["guardrails"]
             <li key={n.gate}>— {n.porque}</li>
           ))}
         </ul>
-        <p className="mt-2">
-          {t(
-            "O motor de prévia pode executar algumas dessas verificações com dados simulados e fazer chamadas ao modelo. Isso não comprova liberação para envio real. Para ver as regras de envio, abra a aba",
-          )}{" "}
-          <span className="font-medium text-foreground">{t("Confere antes de enviar")}</span>.
-        </p>
       </details>
     </div>
   );
@@ -150,20 +134,17 @@ export function TestPanel({ agent, draft, published, readOnly, channelSessions }
   const [message, setMessage] = React.useState("");
   const [contactName, setContactName] = React.useState("");
   const [contactPhone, setContactPhone] = React.useState("");
-  // Etiquetas SIMULADAS da conversa (spec 27): texto separado por vírgula; o servidor normaliza.
   const [contactTags, setContactTags] = React.useState("");
   const [pending, setPending] = React.useState(false);
-  const [result, setResult] = React.useState<TestResponse["data"] | null>(null);
+  const [syncingCatalog, setSyncingCatalog] = React.useState(false);
 
-  /**
-   * O número desta versão está em modo de teste? O teste da aba NÃO passa pelo
-   * canal (é dry-run), então ele respondia normalmente para um número que o
-   * WhatsApp real descartaria — "testei aqui e funcionou, no celular não".
-   *
-   * O resumo vem com a página; a LISTA de telefones só é buscada por quem pode
-   * editá-la (administrador). `readOnly` falso e canal em modo de teste com
-   * lista é a única combinação que pede a lista.
-   */
+  // Histórico do Chat Interativo
+  const [chatHistory, setChatHistory] = React.useState<ChatItem[]>([]);
+  // Controle de correção do agente
+  const [corrigindoId, setCorrigindoId] = React.useState<string | null>(null);
+  const [respostaCorreta, setRespostaCorreta] = React.useState("");
+  const [salvandoTreino, setSalvandoTreino] = React.useState(false);
+
   const canalDaVersao =
     channelSessions?.find((c) => c.id === target?.channel_session_id) ?? null;
   const acessoDoCanal = canalDaVersao?.acessoDaAi ?? null;
@@ -189,16 +170,49 @@ export function TestPanel({ agent, draft, published, readOnly, channelSessions }
       ? `v${target.version_number} ${t("(publicada)")}`
       : `v${target.version_number} ${t("(rascunho)")}`;
 
+  async function handleSyncCatalog() {
+    if (!target) return;
+    setSyncingCatalog(true);
+    try {
+      const res = await apiClient.post<{ total_sincronizados: number; mensagem: string }>(
+        "/api/v1/ai/knowledge/sync-catalog",
+        {
+          agent_id: agent.id,
+          version_id: target.id,
+        },
+      );
+      toast.success(res.mensagem || `${res.total_sincronizados} produtos sincronizados com sucesso!`);
+      qc.invalidateQueries({ queryKey: ["ai_knowledge"] });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message || t("Erro ao sincronizar catálogo."));
+      } else {
+        toast.error(t("Erro inesperado ao sincronizar catálogo."));
+      }
+    } finally {
+      setSyncingCatalog(false);
+    }
+  }
+
   async function handleRun() {
-    if (!message.trim()) {
+    const textoPergunta = message.trim();
+    if (!textoPergunta) {
       toast.error(t("Informe uma mensagem de teste."));
       return;
     }
     if (!target) return;
+
     setPending(true);
-    setResult(null);
+    const userMsgId = `user-${Date.now()}`;
+    const novoHistorico: ChatItem[] = [
+      ...chatHistory,
+      { id: userMsgId, role: "user", text: textoPergunta },
+    ];
+    setChatHistory(novoHistorico);
+    setMessage("");
+
     try {
-      const body: Record<string, unknown> = { sample_message: message.trim() };
+      const body: Record<string, unknown> = { sample_message: textoPergunta };
       if (contactName.trim() || contactPhone.trim()) {
         body.sample_contact = {
           ...(contactName.trim() ? { name: contactName.trim() } : {}),
@@ -210,217 +224,322 @@ export function TestPanel({ agent, draft, published, readOnly, channelSessions }
         .map((tag) => tag.trim())
         .filter((tag) => tag !== "");
       if (etiquetasSimuladas.length) body.sample_tags = etiquetasSimuladas;
+
       const res = await apiClient.post<TestResponse>(
         `/api/v1/ai/agents/${agent.id}/versions/${target.id}/test`,
         body,
-        // ⚠️ O padrão do cliente é 10s, e um turno de agente NÃO cabe nele: o
-        // teste roda o motor inteiro (classificador de etapa, jailbreak, o
-        // agente com as ferramentas, checkpoint, verificação de promessa).
-        // Roteadores de IA (como FreeLLMAPI) podem levar mais tempo fazendo
-        // fallbacks entre chaves gratuitas.
-        // 300s (5 minutos) garante folga para qualquer cascata de roteamento.
         { timeoutMs: 300_000 },
       );
-      setResult(res.data);
+
+      const agentText = res.data.final_text || t("Sem resposta em texto gerada pelo agente.");
+      const agentMsgId = `agent-${Date.now()}`;
+      setChatHistory([
+        ...novoHistorico,
+        {
+          id: agentMsgId,
+          role: "agent",
+          text: agentText,
+          question: textoPergunta,
+          latencyMs: res.data.latency_ms,
+          tokens: `${res.data.tokens_in ?? 0}/${res.data.tokens_out ?? 0}`,
+          toolCalls: res.data.tool_calls,
+          guardrails: res.data.guardrails,
+        },
+      ]);
+
       qc.invalidateQueries({ queryKey: agentRunsKey(agent.id) });
-      toast.success(t("Teste executado."));
+      toast.success(t("Resposta recebida!"));
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(t(err.message) || `${t("Erro")}: ${err.code}`);
       } else {
-        toast.error(t("Erro inesperado."));
+        toast.error(t("Erro inesperado ao consultar agente."));
       }
     } finally {
       setPending(false);
     }
   }
 
+  async function handleSalvarTreino(pergunta: string) {
+    if (!respostaCorreta.trim()) {
+      toast.error(t("Digite a resposta esperada para ensinar o agente."));
+      return;
+    }
+    if (!target) return;
+
+    setSalvandoTreino(true);
+    try {
+      await apiClient.post("/api/v1/ai/knowledge/train", {
+        agent_id: agent.id,
+        version_id: target.id,
+        question: pergunta,
+        answer: respostaCorreta.trim(),
+      });
+
+      toast.success(t("✅ Resposta ensinada com sucesso! O agente aprendeu como responder a essa pergunta."));
+      if (corrigindoId) {
+        setChatHistory((prev) =>
+          prev.map((item) => (item.id === corrigindoId ? { ...item, corrected: true } : item)),
+        );
+      }
+      setCorrigindoId(null);
+      setRespostaCorreta("");
+      qc.invalidateQueries({ queryKey: ["ai_knowledge"] });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message || t("Erro ao ensinar resposta."));
+      } else {
+        toast.error(t("Erro inesperado ao salvar treinamento."));
+      }
+    } finally {
+      setSalvandoTreino(false);
+    }
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="flex flex-col gap-4">
-        <div>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {t("Versão alvo")}
-          </p>
-          <div className="flex items-center gap-2 text-sm">
-            <Badge variant="outline">{versionLabel}</Badge>
-            <span className="font-mono text-xs">
-              {target.provider} / {target.model}
-            </span>
+    <div className="flex flex-col gap-6">
+      {/* Banner de Sincronização do Catálogo e Versão */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-indigo-500/20 bg-indigo-50/50 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <Sparkle size={22} weight="fill" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-foreground">{t("Simulação e Treinamento do Agente")}</span>
+              <Badge variant="outline" className="text-xs">{versionLabel}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {target.provider} · {target.model} — {t("Faça perguntas, confira as respostas e corrija para treinar o agente.")}
+            </p>
           </div>
         </div>
 
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
-          <p className="font-medium text-amber-700 dark:text-amber-400">
-            {t("⚠ Modo teste consome créditos do provider.")}
-          </p>
-          <p className="mt-1 text-muted-foreground">
-            {t("Nenhuma mensagem é enviada via WhatsApp. O run é registrado como dry-run.")}
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="test-message">{t("Mensagem do cliente (sample)")}</Label>
-          <Textarea
-            id="test-message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={t("Oi, quanto custa X?")}
-            rows={4}
-            disabled={pending || readOnly}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-2">
-            <Label htmlFor="test-name">{t("Nome (opcional)")}</Label>
-            <Input
-              id="test-name"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              placeholder="Maria"
-              disabled={pending || readOnly}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="test-phone">{t("Telefone (opcional)")}</Label>
-            <Input
-              id="test-phone"
-              value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value)}
-              placeholder={telefoneExemplo}
-              disabled={pending || readOnly}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="test-tags">{t("Etiquetas da conversa (simulação)")}</Label>
-          <Input
-            id="test-tags"
-            value={contactTags}
-            onChange={(e) => setContactTags(e.target.value)}
-            placeholder={t("Ex.: estetica, vip")}
-            disabled={pending || readOnly}
-          />
-          <p className="text-xs text-muted-foreground">
-            {t(
-              "Separe por vírgula. As skills com estas etiquetas entram neste teste, como entrariam numa conversa com elas.",
-            )}
-          </p>
-        </div>
-
-        <AvisoDoModoDeTeste aviso={avisoDoNumero} podeConfigurar={!readOnly} notaDoSandbox />
-
-        <Button onClick={handleRun} disabled={pending || readOnly} className="self-start">
-          {pending ? t("Executando…") : t("Executar teste")}
+        <Button
+          onClick={handleSyncCatalog}
+          disabled={syncingCatalog || readOnly}
+          variant="outline"
+          className="gap-2 border-indigo-300 font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-950"
+        >
+          <Storefront size={18} weight="bold" />
+          {syncingCatalog ? t("Sincronizando Catálogo…") : t("Sincronizar Catálogo no Agente")}
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {t("Resultado")}
-        </p>
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Painel Esquerdo: Entrada de Teste & Parâmetros */}
+        <div className="flex flex-col gap-4 lg:col-span-5">
+          <div className="rounded-xl border border-border/80 bg-card p-4 shadow-sm">
+            <h3 className="mb-3 text-sm font-semibold">{t("Enviar Pergunta como Cliente")}</h3>
 
-        {!result && !pending ? (
-          <p className="text-sm text-muted-foreground">{t("Nenhum teste executado ainda.")}</p>
-        ) : null}
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="test-message" className="text-xs">{t("Pergunta / Mensagem de teste")}</Label>
+                <Textarea
+                  id="test-message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleRun();
+                    }
+                  }}
+                  placeholder={t("Ex.: Olá, quanto custa o banner 1x1m com ilhós? Tem foto?")}
+                  rows={3}
+                  disabled={pending || readOnly}
+                  className="mt-1 resize-none"
+                />
+              </div>
 
-        {pending ? (
-          <p className="text-sm text-muted-foreground">{t("Executando dry-run…")}</p>
-        ) : null}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="test-name" className="text-xs">{t("Nome (opcional)")}</Label>
+                  <Input
+                    id="test-name"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="João Silva"
+                    disabled={pending || readOnly}
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="test-phone" className="text-xs">{t("Telefone (opcional)")}</Label>
+                  <Input
+                    id="test-phone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder={telefoneExemplo}
+                    disabled={pending || readOnly}
+                    className="mt-1 h-8 text-xs"
+                  />
+                </div>
+              </div>
 
-        {result ? (
-          <>
-            {result.stub ? (
-              <p className="rounded-md border border-border/60 bg-muted/40 p-2 text-xs text-muted-foreground">
-                {t(
-                  "Provedor de teste controlado. O motor e as verificações são os mesmos; não há chamada a uma IA externa.",
-                )}
-              </p>
-            ) : null}
+              <div>
+                <Label htmlFor="test-tags" className="text-xs">{t("Etiquetas simuladas")}</Label>
+                <Input
+                  id="test-tags"
+                  value={contactTags}
+                  onChange={(e) => setContactTags(e.target.value)}
+                  placeholder="vip, orcamento"
+                  disabled={pending || readOnly}
+                  className="mt-1 h-8 text-xs"
+                />
+              </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Cell label={t("Status")}>{result.status}</Cell>
-              <Cell label={t("Latência")}>
-                {typeof result.latency_ms === "number" ? `${result.latency_ms}ms` : "—"}
-              </Cell>
-              <Cell label={t("Tokens in/out")}>
-                {result.tokens_in?.toLocaleString()??"—"} /{" "}
-                {result.tokens_out?.toLocaleString()??"—"}
-              </Cell>
-              <Cell label={t("Custo (cents)")}>{result.cost_cents ?? "—"}</Cell>
-            </div>
+              <AvisoDoModoDeTeste aviso={avisoDoNumero} podeConfigurar={!readOnly} notaDoSandbox />
 
-            <RunTrace
-              toolCalls={result.tool_calls}
-              finalText={result.final_text ?? null}
-              emptyMessage={t("Sem tool calls (resposta direta do LLM).")}
-            />
-
-            {result.candidates ? (
-              <div className="space-y-2 text-xs">
-                <p>
-                  {t(
-                    "Mesmo motor e conhecimento do agente; nenhuma alteração é aplicada ao cliente.",
-                  )}
-                </p>
-                <p>
-                  {t(
-                    "Estado do contato simulado. Canal, opt-out e contexto serão conferidos novamente antes de um envio real.",
-                  )}
-                </p>
-                {result.candidates.map((candidate, i) => (
-                  <details key={i}>
-                    <summary>{t("Verificações da resposta")}</summary>
-                    <pre className="overflow-auto whitespace-pre-wrap">
-                      {JSON.stringify(candidate.trace, null, 2)}
-                    </pre>
-                  </details>
-                ))}
-                {result.warnings?.map((x, i) => (
-                  <p
-                    role="status"
-                    key={`aviso-${i}`}
-                    data-testid="teste-aviso-de-envio"
-                    className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2"
+              <div className="flex items-center gap-2 pt-1">
+                <Button onClick={handleRun} disabled={pending || readOnly} className="w-full">
+                  {pending ? t("Consultando Agente…") : t("Enviar Pergunta")}
+                </Button>
+                {chatHistory.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setChatHistory([])}
+                    title={t("Limpar conversa de teste")}
                   >
-                    {x.message}
-                  </p>
-                ))}
-                {result.impediments?.map((x, i) => (
-                  <p role="status" key={i}>
-                    {x.message}
-                  </p>
-                ))}
-                {!!result.proposals?.length && (
-                  <div>
-                    <p className="font-medium">
-                      {t("Ações propostas: precisam de autorização separada")}
-                    </p>
-                    <ul>
-                      {result.proposals.map((x, i) => (
-                        <li key={i}>{x.tool}</li>
-                      ))}
-                    </ul>
-                  </div>
+                    <ArrowCounterClockwise size={16} />
+                  </Button>
                 )}
               </div>
-            ) : result.guardrails ? (
-              <Verificacoes g={result.guardrails} />
-            ) : null}
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
+            </div>
+          </div>
 
-function Cell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-md border border-border/60 px-2 py-1">
-      <p className="text-[10px] tracking-wide text-muted-foreground uppercase">{label}</p>
-      <p className="font-mono">{children}</p>
+          <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">💡 {t("Como treinar o agente:")}</p>
+            <p className="mt-1">
+              {t("Envie perguntas com dúvidas comuns ou cotações de clientes. Se a resposta da IA não for a ideal, clique em ")}
+              <span className="font-semibold text-primary">"Ensinar o Agente"</span>
+              {t(" logo abaixo da resposta para gravar a explicação correta no conhecimento dele.")}
+            </p>
+          </div>
+        </div>
+
+        {/* Painel Direito: Chat Interativo de Treinamento */}
+        <div className="flex flex-col gap-4 lg:col-span-7">
+          <div className="flex min-h-[460px] flex-col rounded-xl border border-border/80 bg-card p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between border-b pb-2">
+              <span className="text-sm font-semibold">{t("Chat de Simulação e Treinamento")}</span>
+              <span className="text-xs text-muted-foreground">{chatHistory.length} {t("mensagens")}</span>
+            </div>
+
+            {chatHistory.length === 0 ? (
+              <div className="flex flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <Sparkle size={24} />
+                </div>
+                <p className="font-medium text-foreground">{t("Nenhuma mensagem de teste ainda")}</p>
+                <p className="mt-1 max-w-sm text-xs">
+                  {t("Digite uma pergunta ao lado para simular o atendimento e conferir a resposta do atendente de IA.")}
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
+                {chatHistory.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
+                  >
+                    {/* Balão da Mensagem */}
+                    <div
+                      className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+                        msg.role === "user"
+                          ? "rounded-br-sm bg-primary text-primary-foreground font-normal"
+                          : "rounded-bl-sm bg-muted text-foreground border border-border/50 font-normal"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    </div>
+
+                    {/* Metadados e Ações para a resposta do Agente */}
+                    {msg.role === "agent" && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                        {typeof msg.latencyMs === "number" && (
+                          <span className="text-muted-foreground">{msg.latencyMs}ms</span>
+                        )}
+                        {msg.tokens && (
+                          <span className="text-muted-foreground">· tokens: {msg.tokens}</span>
+                        )}
+                        {msg.corrected && (
+                          <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle size={14} weight="fill" />
+                            {t("Treinado com correção")}
+                          </span>
+                        )}
+
+                        {/* Botão de Ensinar / Corrigir Resposta */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCorrigindoId(corrigindoId === msg.id ? null : msg.id);
+                            setRespostaCorreta(msg.text);
+                          }}
+                          className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline"
+                        >
+                          <PencilSimple size={14} />
+                          {corrigindoId === msg.id ? t("Fechar correção") : t("Ensinar o Agente / Corrigir")}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Formulário Inline de Correção e Aprendizado */}
+                    {msg.role === "agent" && corrigindoId === msg.id && (
+                      <div className="mt-3 w-full rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs shadow-sm">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="font-semibold text-foreground">
+                            {t("Ensinar o Agente: Qual é a resposta correta esperada?")}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {t("Pergunta:")} "{msg.question}"
+                          </span>
+                        </div>
+
+                        <Textarea
+                          value={respostaCorreta}
+                          onChange={(e) => setRespostaCorreta(e.target.value)}
+                          rows={3}
+                          placeholder={t("Escreva exatamente como o atendente deve responder a essa dúvida...")}
+                          className="mb-2 bg-background text-xs"
+                          disabled={salvandoTreino}
+                        />
+
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setCorrigindoId(null)}
+                            disabled={salvandoTreino}
+                          >
+                            {t("Cancelar")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => msg.question && handleSalvarTreino(msg.question)}
+                            disabled={salvandoTreino}
+                          >
+                            {salvandoTreino ? t("Salvando no Conhecimento…") : t("Salvar no Conhecimento do Agente")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Detalhes de verificações / Guardrails se houver */}
+                    {msg.guardrails && (
+                      <div className="mt-2 w-full max-w-[85%]">
+                        <Verificacoes g={msg.guardrails} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
