@@ -32,6 +32,7 @@ import {
   useUnmarkPersonalContact,
 } from "@/hooks/contacts/usePersonalContact";
 import { ROLE_RANK } from "@/lib/auth/types";
+import { cn } from "@/lib/utils";
 import {
   useArchiveConversation,
   useCloseConversation,

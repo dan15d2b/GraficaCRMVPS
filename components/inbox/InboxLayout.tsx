@@ -888,8 +888,8 @@ export function InboxLayout({
       className={cn(
         "grid relative h-[calc(100dvh-var(--faixas-de-cima,0px)-var(--rodape-ocupado,0px))] md:h-[calc(100dvh-var(--faixas-de-cima,0px))] w-full grid-cols-1 md:grid-cols-[310px_1fr]",
         painelRecolhido
-          ? "xl:grid-cols-[310px_1fr_2.75rem] 2xl:grid-cols-[340px_1fr_2.75rem]"
-          : "xl:grid-cols-[310px_1fr_296px] 2xl:grid-cols-[340px_1fr_320px]",
+          ? "xl:grid-cols-[272px_1fr_2.75rem] 2xl:grid-cols-[310px_1fr_2.75rem]"
+          : "xl:grid-cols-[272px_1fr_296px] 2xl:grid-cols-[310px_1fr_320px]",
       )}
       style={estiloDaGrade}
       /*

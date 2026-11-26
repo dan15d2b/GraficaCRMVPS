@@ -170,8 +170,6 @@ export async function GET(req: NextRequest): Promise<Response> {
     idsParticipadas = [];
   }
 
-  const criteriosOrcamento = await resolverCriteriosOrcamento(supabase, org);
-
   const [fila, automatico, mine, all, closed, archived, fazerOrcamento] = await Promise.all([
     // A FILA DEIXOU DE SER "sem dono + status de espera".
     //
@@ -220,7 +218,14 @@ export async function GET(req: NextRequest): Promise<Response> {
     // para que arquivar seja reversível e auditável sem se confundir com o
     // encerramento do atendimento.
     countExact().eq("status", "archived"),
-    aplicarFiltroDeOrcamento(countExact(), criteriosOrcamento),
+    (async () => {
+      try {
+        const criterios = await resolverCriteriosOrcamento(supabase, org);
+        return await aplicarFiltroDeOrcamento(countExact(), criterios);
+      } catch {
+        return { count: 0, error: null };
+      }
+    })(),
   ]);
 
   const firstErr =

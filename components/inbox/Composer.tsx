@@ -1175,37 +1175,35 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
         {/* Cápsula de composição no estilo WhatsApp Web (+, emoji, campo, IA, envio/áudio) */}
         <div
           className={cn(
-            "flex items-end gap-1.5 rounded-[24px] border border-border/80 bg-surface-elevated/75 px-2 py-1 shadow-xs transition-[border-color,background-color] duration-fast ease-out focus-within:border-accent/55 focus-within:bg-background",
+            "flex items-end gap-1 rounded-[24px] border border-border/80 bg-surface-elevated/75 px-2 py-1 text-muted-foreground shadow-xs transition-[border-color,background-color] duration-fast ease-out focus-within:border-accent/55 focus-within:bg-background",
             mode === "note" && "border-warning/50 bg-background/95",
           )}
         >
-          <div className="flex shrink-0 items-center gap-0.5 pb-0.5 text-muted-foreground">
-            <AttachMenu
-              disabled={respostaBarrada}
-              onPick={escolherArquivo}
-              onPickContact={mode === "reply" ? () => setContactPickerOpen(true) : undefined}
-            />
-            <EmojiButton
-              disabled={isDisabled}
-              onPick={(emoji) => {
-                const ta = taRef.current;
-                if (!ta) {
-                  setText((t) => t + emoji);
-                  return;
-                }
-                const start = ta.selectionStart ?? text.length;
-                const end = ta.selectionEnd ?? text.length;
-                const next = text.slice(0, start) + emoji + text.slice(end);
-                setText(next);
-                setMencoes((atual) => podarMencoesDaEdicao(text, next, atual));
-                requestAnimationFrame(() => {
-                  ta.focus();
-                  ta.selectionStart = ta.selectionEnd = start + emoji.length;
-                  autoresize();
-                });
-              }}
-            />
-          </div>
+          <AttachMenu
+            disabled={respostaBarrada}
+            onPick={escolherArquivo}
+            onPickContact={mode === "reply" ? () => setContactPickerOpen(true) : undefined}
+          />
+          <EmojiButton
+            disabled={isDisabled}
+            onPick={(emoji) => {
+              const ta = taRef.current;
+              if (!ta) {
+                setText((t) => t + emoji);
+                return;
+              }
+              const start = ta.selectionStart ?? text.length;
+              const end = ta.selectionEnd ?? text.length;
+              const next = text.slice(0, start) + emoji + text.slice(end);
+              setText(next);
+              setMencoes((atual) => podarMencoesDaEdicao(text, next, atual));
+              requestAnimationFrame(() => {
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = start + emoji.length;
+                autoresize();
+              });
+            }}
+          />
           <textarea
             ref={taRef}
             value={text}
@@ -1233,27 +1231,27 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 : t("Enter envia · Shift+Enter quebra linha")
             }
             className={cn(
-              "min-h-9 max-h-56 flex-1 resize-none border-0 bg-transparent px-1.5 py-2 text-base md:text-sm",
+              "min-h-11 md:min-h-[42px] max-h-56 flex-1 resize-none border-0 bg-transparent px-1.5 py-2 text-base text-foreground md:text-sm",
               "placeholder:text-muted-foreground focus:outline-hidden",
             )}
             disabled={mode === "note" ? isDisabled : respostaBarrada}
             aria-label={t("Mensagem")}
           />
-          <div className="flex shrink-0 items-center gap-1 pb-0.5">
-            {mode === "reply" && !sugestao && (
-              <DraftReplyButton
-                conversationId={conversationId}
-                disabled={isDisabled}
-                onDraft={() => {
-                  void invalidar();
-                }}
-              />
-            )}
+          {mode === "reply" && !sugestao && (
+            <DraftReplyButton
+              conversationId={conversationId}
+              disabled={isDisabled}
+              onDraft={() => {
+                void invalidar();
+              }}
+            />
+          )}
+          <div className="shrink-0 mb-0.5">
             {text.trim() || mode === "note" ? (
               <Button
                 type="button"
                 size="icon"
-                className="h-9 w-9 shrink-0 rounded-full"
+                className="shrink-0 rounded-full"
                 onClick={handleSubmit}
                 disabled={(mode === "note" ? isDisabled : envioBarrado) || !text.trim()}
                 aria-label={t("Enviar")}
