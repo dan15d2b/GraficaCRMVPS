@@ -20,6 +20,7 @@ import type { Conversation } from "@/lib/types/messaging";
 import { normalizarTermoDeBusca, termoSemAcento } from "@/lib/inbox/termo-de-busca";
 import { ORDEM_DA_ESPERA, ehAFila } from "@/lib/inbox/comando-da-conversa";
 import { aplicarMarcadores } from "@/lib/inbox/marcador-da-conversa";
+import { aplicarFiltroDeOrcamento, resolverCriteriosOrcamento } from "@/lib/inbox/filtro-orcamento";
 import { exigirControleDaConversa } from "@/lib/inbox/controle-da-conversa";
 import { sincronizarEtiquetasDaConversaComCanal } from "@/lib/channels/sync-conversa-etiquetas";
 import { sincronizarEtapaDoFunilPorTags } from "@/lib/leads/sincronia-tags-funil";
@@ -289,6 +290,10 @@ export async function listConversationsHandler(
   // aqui com a lista inteira faria o TypeScript aceitar e o filtro casar o
   // ARRAY como se fosse um marcador só — lista vazia, sem erro.
   if (q.tag) query = aplicarMarcadores(query, q.tag, q.modo);
+  if (q.stage_filter === "fazer_orcamento") {
+    const criteriosOrcamento = await resolverCriteriosOrcamento(supabase, ctx.organization_id);
+    query = aplicarFiltroDeOrcamento(query, criteriosOrcamento);
+  }
 
   // No BANCO, e não em memória: filtrar depois de paginar devolveria páginas curtas —
   // e, quando a página inteira estivesse lida, uma lista vazia que a tela apresentava

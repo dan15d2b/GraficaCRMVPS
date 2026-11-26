@@ -45,7 +45,6 @@ import { CaretLeft, ChatCircle, IdentificationCard, MagnifyingGlass, X } from "@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { comandosDaFila } from "@/lib/inbox/comando-da-conversa";
 import { togglePainelDoContato } from "@/app/actions/inbox/togglePainelDoContato";
 import type { AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import { buscaValeConsulta } from "@/lib/inbox/termo-de-busca";
@@ -185,21 +184,11 @@ export function soltarFocoEscondido(lista: HTMLElement | null): void {
  */
 export function tabToFilter(
   tab: InboxFiltersValue["tab"],
-  automaticoDaOrg?: boolean,
+  _automaticoDaOrg?: boolean,
 ): Partial<ConversationsFilters> {
   switch (tab) {
-    case "unassigned":
-      // A FILA PERGUNTA POR QUEM MANDA, NÃO POR STATUS.
-      //
-      // Antes ela pedia `assigned_to=unassigned` + os dois estados de espera. Só
-      // que "sem dono e aberta" é também a conversa que o robô está atendendo
-      // agora — medido na VPS em 2026-08-30, a aba dizia 83 e 47 daquelas tinham
-      // o automático no comando. O atendente abria a Fila e via como trabalho
-      // dele quase tudo que já estava sendo respondido.
-      //
-      // `comandosDaFila` é quem cruza isso com o fato org-wide: numa instalação
-      // sem nenhum agente no ar, `automatico` também é "esperando gente".
-      return { comando: comandosDaFila(automaticoDaOrg) };
+    case "fazer_orcamento":
+      return { stage_filter: "fazer_orcamento" };
     case "mine":
       // Sem `exclude_finished` a aba mostra tudo que o atendente JÁ atendeu —
       // `Fechar` muda o status mas não solta o dono (de propósito: quem atendeu
@@ -227,14 +216,14 @@ export function tabToFilter(
   }
 }
 
-const FILTER_TABS: InboxTab[] = ["unassigned", "mine", "all", "closed", "archived", "ai"];
+const FILTER_TABS: InboxTab[] = ["all", "fazer_orcamento", "mine", "ai", "closed", "archived"];
 
 /**
  * Lê ?filter= (G4-02, deep-link). ?filter=all é HONRADO mesmo para agent — a
- * lista volta RLS-scoped (a tab só some cosmeticamente); default: fila.
+ * lista volta RLS-scoped; default: all ("Todas").
  */
 function parseFilterParam(v: string | null): InboxTab {
-  return v && FILTER_TABS.includes(v as InboxTab) ? (v as InboxTab) : "unassigned";
+  return v && FILTER_TABS.includes(v as InboxTab) ? (v as InboxTab) : "all";
 }
 
 /**
@@ -447,7 +436,7 @@ export function InboxLayout({
    * e completa quando a resposta chega; a janela é de ~200ms e o rótulo nunca
    * discorda do filtro, porque os dois usam a mesma convenção.
    */
-  const { data: automaticoDaOrg, isLoading: automaticoCarregando } = useAutomaticoAtivo();
+  const { data: automaticoDaOrg } = useAutomaticoAtivo();
   const composerRef = useRef<ComposerHandle | null>(null);
 
   const filters: ConversationsFilters = useMemo(
@@ -505,7 +494,7 @@ export function InboxLayout({
    * Falha ou permissão ausente não travam a tela: aí `isLoading` é falso, a
    * consulta sai com a convenção de sempre e nada fica esperando para sempre.
    */
-  const filaEsperaOFatoDaOrg = filterValue.tab === "unassigned" && automaticoCarregando;
+  const filaEsperaOFatoDaOrg = false;
 
   // We need the selected conversation object for header / composer / side panel.
   // Source it from the same query the list uses to avoid an extra request.
@@ -897,14 +886,10 @@ export function InboxLayout({
     <div
       ref={gradeRef}
       className={cn(
-        "grid relative h-[calc(100dvh-var(--faixas-de-cima,0px)-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full grid-cols-1 md:grid-cols-[300px_1fr]",
-        // Recolhido (issue #3004), a terceira trilha vira o trilho estreito do
-        // botão de expandir e a conversa fica com o que era da ficha. Duas
-        // listas em vez de uma classe com valor em variável: o Tailwind precisa
-        // do literal para gerar o CSS.
+        "grid relative h-[calc(100dvh-var(--faixas-de-cima,0px)-var(--rodape-ocupado,0px))] md:h-[calc(100dvh-var(--faixas-de-cima,0px))] w-full grid-cols-1 md:grid-cols-[310px_1fr]",
         painelRecolhido
-          ? "xl:grid-cols-[272px_1fr_2.75rem] 2xl:grid-cols-[300px_1fr_2.75rem]"
-          : "xl:grid-cols-[272px_1fr_296px] 2xl:grid-cols-[300px_1fr_320px]",
+          ? "xl:grid-cols-[310px_1fr_2.75rem] 2xl:grid-cols-[340px_1fr_2.75rem]"
+          : "xl:grid-cols-[310px_1fr_296px] 2xl:grid-cols-[340px_1fr_320px]",
       )}
       style={estiloDaGrade}
       /*
@@ -950,8 +935,8 @@ export function InboxLayout({
           colunas.lista,
         )}
       >
-        <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
-          <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">{t("Conversas")}</span>
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 max-md:pr-[180px]">
+          <h1 className="text-xl font-bold tracking-tight text-text">{t("Conversas")}</h1>
           <BotaoIniciarConversa variant="icon" />
         </div>
         <InboxFilters value={filterValue} onChange={setFilterValue} />
@@ -1056,6 +1041,7 @@ export function InboxLayout({
               key={selectedConversation.id}
               conversation={selectedConversation}
               onAbrirConversa={handleSelect}
+              reservarDireitaFlutuante={painelRecolhido}
               onBuscar={() =>
                 buscaAberta
                   ? fecharBusca()

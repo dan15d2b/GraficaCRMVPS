@@ -20,7 +20,7 @@ import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /** A contagem que "chega" do servidor de dados. `null` = ainda não chegou. */
-let contagens: { fila: number } | null = null;
+let contagens: { all: number } | null = null;
 
 vi.mock("@/hooks/inbox/useConversationCounts", () => ({
   useConversationCounts: () => ({ data: contagens }),
@@ -49,7 +49,7 @@ import { InboxFilters } from "@/components/inbox/InboxFilters";
 
 type PropsDoInbox = Parameters<typeof InboxFilters>[0];
 const FILTRO = {
-  tab: "unassigned",
+  tab: "all",
   search: "",
   assigned_to: null,
   onlyUnread: false,
@@ -68,9 +68,9 @@ afterEach(() => {
 
 describe("Inbox › o badge das abas hidrata sem divergir da contagem (#3736)", () => {
   it("controle: o HTML do servidor sai SEM o badge (não há contagem no servidor)", () => {
-    contagens = { fila: 41 };
+    contagens = { all: 41 };
     const html = renderToString(<InboxFilters value={FILTRO} onChange={() => {}} />);
-    expect(html).toContain("Fila");
+    expect(html).toContain("Todas");
     expect(html, "o servidor passou a imprimir a contagem: a divergência volta").not.toContain(
       "tabular-nums",
     );
@@ -79,7 +79,7 @@ describe("Inbox › o badge das abas hidrata sem divergir da contagem (#3736)", 
   it("a contagem chega DURANTE a hidratação: nenhum erro recuperável, e o badge aparece depois", async () => {
     const html = renderToString(<InboxFilters value={FILTRO} onChange={() => {}} />);
     // A resposta da consulta chega entre o HTML e a hidratação — a janela do #418.
-    contagens = { fila: 41 };
+    contagens = { all: 41 };
 
     const erros: unknown[] = [];
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});

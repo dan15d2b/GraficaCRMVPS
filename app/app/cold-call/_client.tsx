@@ -1193,7 +1193,7 @@ function Sessao({
                     onClick={() => setResultado(resultado === id ? null : id)}
                     data-testid={`resultado-${id}`}
                     className={cn(
-                      "flex min-h-11 items-center gap-1.5 rounded-xl border px-2 py-1.5 text-left text-xs font-medium transition-all duration-150 active:scale-[.97] disabled:pointer-events-none disabled:opacity-50",
+                      "flex min-h-11 items-center gap-1.5 rounded-xl border px-2 py-1.5 text-left text-xs font-medium transition-[background-color,border-color,color,scale] duration-150 ease-out active:scale-[.97] disabled:pointer-events-none disabled:opacity-50",
                       resultado === id
                         ? "border-transparent bg-accent text-accent-foreground"
                         : "border-border/70 bg-surface-elevated/30 text-text hover:border-accent/50 hover:bg-surface-elevated/60",

@@ -976,7 +976,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         className={cn(
-          "relative border-t border-border bg-background px-3 py-2",
+          "relative border-t border-border/70 bg-background/95 px-3 pt-1.5 pb-2.5",
           mode === "note" && "border-warning/40 bg-warning-bg",
         )}
       >
@@ -1100,17 +1100,17 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             </p>
           </div>
         )}
-        {/* Barra superior de opções do compositor ("as opções você sobe") */}
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
+        {/* Faixa superior compacta: alternância Responder/Nota interna + Respostas rápidas */}
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1 rounded-full bg-muted/65 p-0.5">
             <button
               type="button"
               onClick={() => setMode("reply")}
               className={cn(
-                "min-h-8 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "min-h-7 cursor-pointer rounded-full px-3 py-0.5 text-xs font-medium transition-[background-color,color,scale] duration-fast ease-out active:scale-[0.97]",
                 mode === "reply"
                   ? "bg-accent text-accent-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted",
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {t("Responder")}
@@ -1119,17 +1119,67 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
               type="button"
               onClick={() => setMode("note")}
               className={cn(
-                "min-h-8 cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "min-h-7 cursor-pointer rounded-full px-3 py-0.5 text-xs font-medium transition-[background-color,color,scale] duration-fast ease-out active:scale-[0.97]",
                 mode === "note"
                   ? "bg-warning text-warning-fg shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted",
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {t("Nota interna")}
             </button>
           </div>
+        </div>
 
-          <div className="flex items-center gap-1 text-muted-foreground">
+        {/*
+          A FAIXA DA CITAÇÃO — o que o atendente escolheu responder.
+        */}
+        {respondendo && mode === "reply" && (
+          <div className="mb-1.5 flex items-start gap-2 rounded-xl border-l-2 border-primary bg-muted/60 px-2.5 py-1.5">
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-medium text-primary">
+                {respondendo.direction === "outbound" ? t("Você") : t("Cliente")}
+              </div>
+              <div className="line-clamp-2 text-xs text-muted-foreground">
+                {respondendo.type === "contact"
+                  ? resolveSharedContact(respondendo)?.name || t("Contato")
+                  : respondendo.body?.trim() || t("(sem texto)")}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onCancelarResposta}
+              aria-label={t("Cancelar resposta")}
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
+        {/* A BARRA DE RECURSOS (#2833) */}
+        {mode === "reply" && (
+          <BarraDeRecursos
+            recursos={templates.data ?? []}
+            grupos={grupos.data ?? []}
+            disabled={respostaBarrada || rascunhoNoCampo}
+            dica={
+              rascunhoNoCampo
+                ? t(
+                    "A resposta rápida substitui o texto do campo. Envie ou apague o rascunho antes.",
+                  )
+                : undefined
+            }
+            onEscolher={escolherRecurso}
+            usuarioId={usuarioId}
+          />
+        )}
+        {/* Cápsula de composição no estilo WhatsApp Web (+, emoji, campo, IA, envio/áudio) */}
+        <div
+          className={cn(
+            "flex items-end gap-1.5 rounded-[24px] border border-border/80 bg-surface-elevated/75 px-2 py-1 shadow-xs transition-[border-color,background-color] duration-fast ease-out focus-within:border-accent/55 focus-within:bg-background",
+            mode === "note" && "border-warning/50 bg-background/95",
+          )}
+        >
+          <div className="flex shrink-0 items-center gap-0.5 pb-0.5 text-muted-foreground">
             <AttachMenu
               disabled={respostaBarrada}
               onPick={escolherArquivo}
@@ -1155,61 +1205,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 });
               }}
             />
-            {mode === "reply" && !sugestao && (
-              <DraftReplyButton
-                conversationId={conversationId}
-                disabled={isDisabled}
-                onDraft={() => {
-                  void invalidar();
-                }}
-              />
-            )}
           </div>
-        </div>
-
-        {/*
-          A FAIXA DA CITAÇÃO — o que o atendente escolheu responder.
-        */}
-        {respondendo && mode === "reply" && (
-          <div className="mb-1 flex items-start gap-2 rounded-md border-l-2 border-primary bg-muted/60 px-2 py-1.5">
-            <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-medium text-primary">
-                {respondendo.direction === "outbound" ? t("Você") : t("Cliente")}
-              </div>
-              <div className="line-clamp-2 text-xs text-muted-foreground">
-                {respondendo.type === "contact"
-                  ? resolveSharedContact(respondendo)?.name || t("Contato")
-                  : respondendo.body?.trim() || t("(sem texto)")}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onCancelarResposta}
-              aria-label={t("Cancelar resposta")}
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        )}
-        {/* A BARRA DE RECURSOS (#2833) */}
-        {mode === "reply" && (
-          <BarraDeRecursos
-            recursos={templates.data ?? []}
-            grupos={grupos.data ?? []}
-            disabled={respostaBarrada || rascunhoNoCampo}
-            dica={
-              rascunhoNoCampo
-                ? t(
-                    "A resposta rápida substitui o texto do campo. Envie ou apague o rascunho antes.",
-                  )
-                : undefined
-            }
-            onEscolher={escolherRecurso}
-            usuarioId={usuarioId}
-          />
-        )}
-        <div className="flex items-end gap-2">
           <textarea
             ref={taRef}
             value={text}
@@ -1237,18 +1233,27 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 : t("Enter envia · Shift+Enter quebra linha")
             }
             className={cn(
-              "min-h-10 md:min-h-[42px] max-h-56 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm",
-              "placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-hidden",
+              "min-h-9 max-h-56 flex-1 resize-none border-0 bg-transparent px-1.5 py-2 text-base md:text-sm",
+              "placeholder:text-muted-foreground focus:outline-hidden",
             )}
             disabled={mode === "note" ? isDisabled : respostaBarrada}
             aria-label={t("Mensagem")}
           />
-          <div className="shrink-0 mb-0.5">
+          <div className="flex shrink-0 items-center gap-1 pb-0.5">
+            {mode === "reply" && !sugestao && (
+              <DraftReplyButton
+                conversationId={conversationId}
+                disabled={isDisabled}
+                onDraft={() => {
+                  void invalidar();
+                }}
+              />
+            )}
             {text.trim() || mode === "note" ? (
               <Button
                 type="button"
                 size="icon"
-                className="shrink-0"
+                className="h-9 w-9 shrink-0 rounded-full"
                 onClick={handleSubmit}
                 disabled={(mode === "note" ? isDisabled : envioBarrado) || !text.trim()}
                 aria-label={t("Enviar")}

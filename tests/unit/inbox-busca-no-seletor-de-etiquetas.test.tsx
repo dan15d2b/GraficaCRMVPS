@@ -68,7 +68,7 @@ vi.mock("@/hooks/inbox/useConversationCounts", () => ({
 const GATILHO = "Filtrar por tag";
 const BUSCA = "Buscar etiqueta";
 
-const VALUE: InboxFiltersValue = { tab: "unassigned", search: "", onlyUnread: false };
+const VALUE: InboxFiltersValue = { tab: "all", search: "", onlyUnread: false };
 
 function abrirMenu(value: InboxFiltersValue = VALUE) {
   const onChange = vi.fn();

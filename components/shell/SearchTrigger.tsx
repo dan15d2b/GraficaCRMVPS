@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/hooks/i18n/useT";
 import { CommandPalette } from "@/components/shell/CommandPalette";
 
-export function SearchTrigger() {
+export function SearchTrigger({ iconOnly = false }: { iconOnly?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
 
@@ -16,16 +16,30 @@ export function SearchTrigger() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-2 text-muted-foreground"
-        onClick={() => setOpen(true)}
-      >
-        <MagnifyingGlass size={14} aria-hidden />
-        <span className="max-md:sr-only">{t("Buscar...")}</span>
-        <kbd className="ml-2 hidden md:inline rounded-md border bg-muted px-1.5 py-0.5 text-[10px]">⌘K</kbd>
-      </Button>
+      {iconOnly ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          onClick={() => setOpen(true)}
+          aria-label={t("Buscar...")}
+          title={`${t("Buscar...")} (⌘K)`}
+          data-testid="busca-flutuante-lupa"
+        >
+          <MagnifyingGlass size={16} aria-hidden />
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-muted-foreground"
+          onClick={() => setOpen(true)}
+        >
+          <MagnifyingGlass size={14} aria-hidden />
+          <span className="max-md:sr-only">{t("Buscar...")}</span>
+          <kbd className="ml-2 hidden md:inline rounded-md border bg-muted px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+        </Button>
+      )}
       <CommandPalette open={open} onOpenChange={setOpen} />
     </>
   );

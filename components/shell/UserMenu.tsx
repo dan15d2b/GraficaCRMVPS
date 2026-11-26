@@ -26,7 +26,7 @@ function initials(name: string | null, email: string): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu() {
+export function UserMenu({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const user = useUser();
   const { signOut } = useAuth();
@@ -35,7 +35,7 @@ export function UserMenu() {
   const { data: sysVersion } = useSystemVersion();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={compact ? "flex items-center gap-0.5" : "flex items-center gap-2"}>
       <SeletorDeIdioma />
       <ThemeToggle />
       <DropdownMenu>

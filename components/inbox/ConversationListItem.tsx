@@ -293,7 +293,7 @@ export function ConversationListItem({
           data-testid={`selecao-em-lote-${conversation.id}`}
           onClick={() => onAlternarSelecao(conversation.id)}
           className={cn(
-            "mt-3.5 ml-2.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all",
+            "mt-3.5 ml-2.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-[background-color,border-color] duration-fast ease-out",
             "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent",
             selecionado
               ? "border-accent bg-accent text-accent-foreground opacity-100"
@@ -308,17 +308,17 @@ export function ConversationListItem({
         data-conversation-id={conversation.id}
         onClick={() => onSelect(conversation.id)}
         className={cn(
-          "group relative flex min-w-0 flex-1 items-start gap-3.5 px-3.5 py-3 text-left transition-colors hover:bg-surface-elevated",
+          "group relative flex min-w-0 flex-1 items-start gap-3.5 rounded-xl mx-1.5 my-0.5 px-3 py-2.5 text-left transition-[background-color] duration-fast ease-out hover:bg-surface-elevated",
           "focus-visible:outline-hidden focus-visible:bg-surface-elevated",
           isSelected &&
             (selecionado
               ? "hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
-              : "bg-accent-soft hover:bg-accent-soft"),
+              : "bg-accent-soft/85 hover:bg-accent-soft/85"),
         )}
         aria-current={isSelected ? "true" : undefined}
       >
       {isSelected && (
-        <span className="absolute inset-y-0 left-0 w-1 bg-accent" aria-hidden />
+        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-accent" aria-hidden />
       )}
       <div className="relative shrink-0">
         <Avatar className="h-11 w-11">
@@ -377,7 +377,10 @@ export function ConversationListItem({
             )}
           </span>
           <span
-            className="shrink-0 text-xs tabular-nums text-text-subtle font-medium"
+            className={cn(
+              "shrink-0 text-xs tabular-nums font-medium",
+              unread > 0 ? "font-semibold text-accent" : "text-text-subtle",
+            )}
             title={naFila ? t("Desde quando o cliente espera resposta") : undefined}
           >
             {time}

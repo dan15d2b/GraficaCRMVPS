@@ -440,7 +440,7 @@ export function ProducaoClient({
         {/* Total em Produção */}
         <div
           onClick={() => setFiltroAba(filtroAba === "producao" ? "todos" : "producao")}
-          className={`cursor-pointer rounded-lg border p-3 transition-all ${
+          className={`cursor-pointer rounded-lg border p-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out ${
             filtroAba === "producao"
               ? "border-accent bg-accent/15 ring-1 ring-accent"
               : "border-border bg-card hover:border-border/80"
@@ -464,7 +464,7 @@ export function ProducaoClient({
         {/* Atrasados */}
         <div
           onClick={() => setFiltroAba("atrasado")}
-          className={`cursor-pointer rounded-lg border p-3 transition-all ${
+          className={`cursor-pointer rounded-lg border p-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out ${
             filtroAba === "atrasado"
               ? "border-red-500 bg-red-500/10 ring-1 ring-red-500"
               : "border-red-500/30 bg-red-500/5 hover:border-red-500/60"
@@ -488,7 +488,7 @@ export function ProducaoClient({
         {/* Hoje / Amanhã */}
         <div
           onClick={() => setFiltroAba("urgente")}
-          className={`cursor-pointer rounded-lg border p-3 transition-all ${
+          className={`cursor-pointer rounded-lg border p-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out ${
             filtroAba === "urgente"
               ? "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500"
               : "border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60"
@@ -512,7 +512,7 @@ export function ProducaoClient({
         {/* No Prazo */}
         <div
           onClick={() => setFiltroAba("no_prazo")}
-          className={`cursor-pointer rounded-lg border p-3 transition-all ${
+          className={`cursor-pointer rounded-lg border p-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out ${
             filtroAba === "no_prazo"
               ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500"
               : "border-border bg-card hover:border-border/80"
@@ -534,7 +534,7 @@ export function ProducaoClient({
         {/* Pronto para Retirada */}
         <div
           onClick={() => setFiltroAba("retirada")}
-          className={`cursor-pointer rounded-lg border p-3 transition-all ${
+          className={`cursor-pointer rounded-lg border p-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out ${
             filtroAba === "retirada"
               ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500"
               : "border-border bg-card hover:border-border/80"
@@ -558,7 +558,7 @@ export function ProducaoClient({
         {/* Pronto para Instalação */}
         <div
           onClick={() => setFiltroAba("instalacao")}
-          className={`cursor-pointer rounded-lg border p-3 transition-all ${
+          className={`cursor-pointer rounded-lg border p-3 transition-[background-color,border-color,box-shadow] duration-fast ease-out ${
             filtroAba === "instalacao"
               ? "border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500"
               : "border-border bg-card hover:border-border/80"
@@ -743,7 +743,7 @@ export function ProducaoClient({
             return (
               <div
                 key={item.id}
-                className={`group relative flex flex-col justify-between rounded-xl border p-4 transition-all hover:shadow-md ${
+                className={`group relative flex flex-col justify-between rounded-xl border p-4 transition-[border-color,box-shadow] duration-fast ease-out hover:shadow-md ${
                   ehRetirada
                     ? "border-emerald-300/80 bg-emerald-50/20 dark:border-emerald-900/60 dark:bg-emerald-950/10 hover:border-emerald-500 shadow-xs"
                     : ehInstalacao

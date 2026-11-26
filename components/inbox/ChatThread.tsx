@@ -8,6 +8,7 @@ import { useT } from "@/hooks/i18n/useT";
 import { format, isToday, isYesterday } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CaretDown } from "@/lib/ui/icons";
 import { MessageBubble } from "./MessageBubble";
 import { separarReacoes } from "@/lib/inbox/reacoes-no-fio";
 import { NoteCard } from "./NoteCard";
@@ -276,16 +277,26 @@ export function ChatThread({
   }
 
   return (
-    <div {...sinalDoCanal} className="relative flex h-full min-h-0 min-w-0 flex-col">
+    <div {...sinalDoCanal} className="relative flex h-full min-h-0 min-w-0 flex-col bg-surface/35">
+      {/* Textura geométrica sutil inspirada no WhatsApp Web, adaptável a tema claro e escuro */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.045]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
+          backgroundSize: "24px 24px",
+        }}
+      />
       {termo && (
-        <div className="px-4 py-1 text-xs text-muted-foreground" role="status">
+        <div className="relative z-10 px-4 py-1 text-xs text-muted-foreground" role="status">
           {t("Resultados nas mensagens carregadas")}: {resultados.size}
         </div>
       )}
       <div ref={scrollerRef} role="region" aria-label={t("Mensagens da conversa")} tabIndex={0}
         onScroll={scroll.onScroll} onWheel={scroll.onWheel} onTouchMove={scroll.onTouchMove}
         onPointerDown={scroll.onPointerDown} onKeyDown={scroll.onKeyDown}
-        className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain py-2">
+        className="relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain py-2">
         <div ref={contentRef}>
         {q.hasNextPage && (
           <div className="flex justify-center py-2">
@@ -380,12 +391,32 @@ export function ChatThread({
         <div ref={bottomRef} />
         </div>
       </div>
-      {scroll.hasNewMessages && (
-        <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center px-3" role="status" aria-live="polite">
-          <Button size="sm" className="h-auto max-w-full whitespace-normal rounded-full shadow-lg"
-            onClick={() => scroll.scrollToEnd()}>
-            {t("Novas mensagens · Ir para o fim")}
-          </Button>
+      {(!scroll.atBottom || scroll.hasNewMessages) && (
+        <div
+          className="pointer-events-none absolute right-4 bottom-3 z-20 flex items-center gap-2"
+          role={scroll.hasNewMessages ? "status" : undefined}
+          aria-live={scroll.hasNewMessages ? "polite" : undefined}
+        >
+          {scroll.hasNewMessages && (
+            <Button
+              size="sm"
+              className="pointer-events-auto h-8 rounded-full px-3 text-xs font-medium shadow-md"
+              onClick={() => scroll.scrollToEnd()}
+            >
+              {t("Novas mensagens · Ir para o fim")}
+            </Button>
+          )}
+          <button
+            type="button"
+            onClick={() => scroll.scrollToEnd()}
+            aria-label={t("Ir para o fim")}
+            className="pointer-events-auto relative flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-surface-elevated/95 text-text shadow-md backdrop-blur-sm transition-[background-color,scale] duration-fast ease-out hover:bg-muted active:scale-[0.94]"
+          >
+            <CaretDown size={18} aria-hidden />
+            {scroll.hasNewMessages && (
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-background" />
+            )}
+          </button>
         </div>
       )}
     </div>

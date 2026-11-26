@@ -28,12 +28,14 @@ export function useThreadAutoScroll(position: ThreadPosition, soNaCaixa = false)
   const previous = useRef<ThreadPosition | null>(null);
   const olderAnchor = useRef<{ top: number; height: number; pages: number } | null>(null);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
 
   const scrollToEnd = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (!bottomRef.current || !scrollerRef.current) return;
     following.current = true;
     scrollingToEnd.current = true;
     setHasNewMessages(false);
+    setAtBottom(true);
     // Dentro de uma página que rola (Cold Call), `scrollIntoView` arrastaria a página junto.
     if (soNaCaixa) scrollerRef.current.scrollTo({ top: scrollerRef.current.scrollHeight, behavior });
     else bottomRef.current.scrollIntoView({ behavior, block: "end" });
@@ -43,6 +45,7 @@ export function useThreadAutoScroll(position: ThreadPosition, soNaCaixa = false)
     const scroller = scrollerRef.current;
     if (!scroller) return;
     const nearEnd = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= 120;
+    setAtBottom(nearEnd);
     if (nearEnd) {
       observedSize.current = viewportSize(scroller);
       following.current = true;
@@ -144,6 +147,6 @@ export function useThreadAutoScroll(position: ThreadPosition, soNaCaixa = false)
     return () => observer.disconnect();
   }, [conversationId, ready]);
 
-  return { scrollerRef, contentRef, bottomRef, hasNewMessages, scrollToEnd, beforeLoadOlder,
+  return { scrollerRef, contentRef, bottomRef, hasNewMessages, atBottom, scrollToEnd, beforeLoadOlder,
     onScroll, onWheel: interruptScroll, onTouchMove: interruptScroll, onPointerDown, onKeyDown };
 }

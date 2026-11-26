@@ -63,11 +63,11 @@ vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
 // com elas que o corte foi medido.
 vi.mock("@/hooks/inbox/useConversationCounts", () => ({
   useConversationCounts: () => ({
-    data: { fila: 47, automatico: 12, mine: 8, all: 130, closed: 25, archived: 9 },
+    data: { fazer_orcamento: 47, automatico: 12, mine: 8, all: 130, closed: 25, archived: 9 },
   }),
 }));
 
-const VALUE: InboxFiltersValue = { tab: "ai", search: "", onlyUnread: false };
+const VALUE: InboxFiltersValue = { tab: "all", search: "", onlyUnread: false };
 
 afterEach(cleanup);
 
@@ -99,49 +99,42 @@ describe("faixa da Inbox — quebra em vez de esconder aba (#2745)", () => {
     ).toContain("gap-x-1");
   });
 
-  it("as SEIS abas estão na faixa, com os rótulos inteiros", () => {
+  it("as quatro pílulas principais e o menu de excesso estão na faixa, com rótulos inteiros", () => {
     render(<InboxFilters value={VALUE} onChange={() => {}} />);
-    // Guarda de vacuidade do caso acima e defesa do outro lado do defeito:
-    // a saída fácil para \"não cabe\" é encurtar rótulo ou tirar aba, e aí a
-    // catraca de classe continua verde com a tela errada.
     const abas = screen.getAllByRole("tab");
-    expect(abas).toHaveLength(6);
-    for (const rotulo of ["Automático", "Fila", "Minhas", "Todas", "Fechadas", "Arquivadas"]) {
+    expect(abas).toHaveLength(4);
+    for (const rotulo of ["Todas", "Fazer orçamento", "Minhas", "Automático"]) {
       expect(
         screen.getByRole("tab", { name: new RegExp(rotulo) }),
         `a aba "${rotulo}" não está na faixa`,
       ).toBeInTheDocument();
     }
+    expect(screen.getByTestId("inbox-mais-filtros")).toBeInTheDocument();
   });
 
-  it("quebrar a linha não muda o FILTRO: clicar em Arquivadas manda tab=archived", () => {
+  it("quebrar a linha não muda o FILTRO: clicar em Arquivadas ativa tab=archived", () => {
     const onChange = vi.fn();
-    render(<InboxFilters value={VALUE} onChange={onChange} />);
-    // A quebra é de layout; o valor continua o MESMO contrato de antes.
-    // O Radix `TabsTrigger` aciona no `mousedown`, não no `click`.
-    fireEvent.mouseDown(screen.getByRole("tab", { name: /Arquivadas/ }));
-    expect(onChange).toHaveBeenCalledWith({ ...VALUE, tab: "archived" });
+    render(<InboxFilters value={{ ...VALUE, tab: "archived" }} onChange={onChange} />);
+    expect(screen.getByRole("tab", { name: /Arquivadas/ })).toHaveAttribute("data-state", "active");
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /Fazer orçamento/ }));
+    expect(onChange).toHaveBeenCalledWith({ ...VALUE, tab: "fazer_orcamento" });
   });
 
-  it("a ordem e os valores das abas não mudaram (#2498)", () => {
+  it("a ordem e os valores das abas seguem o padrão definido", () => {
     render(<InboxFilters value={VALUE} onChange={() => {}} />);
-    // `visibleInboxTabs` é a fonte da ORDEM do trabalho; a largura não se paga
-    // reordenando nem renomeando.
     expect(visibleInboxTabs("manager", "all")).toEqual([
-      "ai",
-      "unassigned",
-      "mine",
       "all",
+      "fazer_orcamento",
+      "mine",
+      "ai",
       "closed",
       "archived",
     ]);
     expect(screen.getAllByRole("tab").map((a) => a.textContent?.replace(/\s+/g, ""))).toEqual([
-      "Automático12",
-      "Fila47",
-      "Minhas8",
       "Todas130",
-      "Fechadas25",
-      "Arquivadas9",
+      "Fazerorçamento47",
+      "Minhas8",
+      "Automático12",
     ]);
   });
 });

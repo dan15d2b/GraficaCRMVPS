@@ -1,7 +1,7 @@
 "use client";
 import { useT } from "@/hooks/i18n/useT";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CaretLeft, CaretRight, MagnifyingGlass } from "@/lib/ui/icons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CaretDown, MagnifyingGlass, X } from "@/lib/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -38,45 +37,29 @@ import { useDepoisDeMontar } from "@/hooks/ui/useDepoisDeMontar";
 import { roleAtLeast, type Role, type VisibilityMode } from "@/lib/auth/types";
 import { SeletorDeAtendente } from "@/components/inbox/SeletorDeAtendente";
 
-export type InboxTab = "unassigned" | "mine" | "all" | "closed" | "archived" | "ai";
+export type InboxTab = "all" | "fazer_orcamento" | "mine" | "ai" | "closed" | "archived";
 
 /**
- * A faixa na ORDEM DO TRABALHO (#2498): primeiro o que o robô conduz, depois o
- * que espera gente, depois o histórico. Antes "Automático" fechava a faixa,
- * depois de dois passados — o valor que o operador mais olha era o último.
- *
- * Só a ordem mudou: mesmos `value`, mesmos rótulos, mesmas permissões
- * (`visibleInboxTabs` filtra sem reordenar) e mesmas contagens (`countFor` lê
- * por chave, e a chave não acompanha a posição). `moveTab` anda pelo MESMO
- * array, então as setas continuam vizinha a vizinha.
+ * Distribuição de filtros no estilo WhatsApp Web:
+ * "Todas" abre como janela principal, seguida de "Fazer orçamento", "Minhas"
+ * e "Automático"; "Fechadas" e "Arquivadas" ficam acessíveis no menu de excesso.
  */
 const INBOX_TABS: { value: InboxTab; label: string }[] = [
-  // "Automático", não "IA": a palavra deste ator já é contrato em quatro arquivos
-  // e no dicionário, e `handoff-por-orcamento.test.ts` usa literalmente "Voltar
-  // para a IA" como a sabotagem que deve reprovar. O rótulo não mudou quando o
-  // significado mudou (deixou de filtrar `ai_handling` e passou a perguntar a
-  // régua do motor) — e a posição sim: ela era a última fora do padrão.
-  { value: "ai", label: "Automático" },
-  { value: "unassigned", label: "Fila" },
-  { value: "mine", label: "Minhas" },
   { value: "all", label: "Todas" },
+  { value: "fazer_orcamento", label: "Fazer orçamento" },
+  { value: "mine", label: "Minhas" },
+  { value: "ai", label: "Automático" },
   { value: "closed", label: "Fechadas" },
-  // "Arquivadas" fica ao lado de "Fechadas" porque as duas são passado — e
-  // separada dela porque são passados diferentes (#923): fechada é atendimento
-  // encerrado, arquivada é o que saiu da fila de trabalho sem ser destruído.
   { value: "archived", label: "Arquivadas" },
 ];
 
+const PRIMARY_TABS: InboxTab[] = ["all", "fazer_orcamento", "mine", "ai"];
+
 /**
- * Visões visíveis por papel + escopo (G4-02, acceptance 1). 'Todas' fica oculta
- * para `agent` quando visibility_mode ≠ 'all'; viewer/manager/admin sempre veem.
- * É apenas cosmético — a RLS (G4-01) é quem garante o escopo mesmo via ?filter=all.
+ * Visões disponíveis no inbox; a RLS (G4-01) garante o escopo por papel no servidor.
  */
-export function visibleInboxTabs(role: Role, mode: VisibilityMode | undefined): InboxTab[] {
-  // `own_and_sector` (#4022): a conversa do colega do setor não está na Fila nem
-  // em Minhas — sem a aba Todas ela não aparece em lugar nenhum da tela.
-  const hideAll = role === "agent" && mode !== "all" && mode !== "own_and_sector";
-  return INBOX_TABS.filter((t) => !(t.value === "all" && hideAll)).map((t) => t.value);
+export function visibleInboxTabs(_role: Role, _mode: VisibilityMode | undefined): InboxTab[] {
+  return INBOX_TABS.map((t) => t.value);
 }
 
 export interface InboxFiltersValue {
@@ -122,40 +105,6 @@ interface Props {
 export function InboxFilters({ value, onChange }: Props) {
   const t = useT();
   const [searchInput, setSearchInput] = useState(value.search);
-  const tabsListRef = useRef<HTMLDivElement>(null);
-  const [moreTabs, setMoreTabs] = useState({ left: false, right: false });
-  const updateMoreTabs = useCallback(() => {
-    const list = tabsListRef.current;
-    if (!list) return;
-    const maxScroll = Math.max(0, list.scrollWidth - list.clientWidth);
-    const next = { left: list.scrollLeft > 1, right: list.scrollLeft < maxScroll - 1 };
-    setMoreTabs((previous) =>
-      previous.left === next.left && previous.right === next.right ? previous : next,
-    );
-  }, []);
-  useEffect(() => {
-    const list = tabsListRef.current;
-    if (!list) return;
-    const centerSelectedTab = () => {
-      // Deixar a aba só na borda esconde as vizinhas. Centralizar mostra o
-      // contexto dos dois lados, salvo nas extremidades naturais da faixa.
-      const selected = list.querySelector<HTMLElement>('[role="tab"][data-state="active"]');
-      if (selected) {
-        const selectedCenter =
-          selected.getBoundingClientRect().left - list.getBoundingClientRect().left +
-          list.scrollLeft + selected.offsetWidth / 2;
-        const maxScroll = Math.max(0, list.scrollWidth - list.clientWidth);
-        list.scrollLeft = Math.max(0, Math.min(maxScroll, selectedCenter - list.clientWidth / 2));
-      }
-      updateMoreTabs();
-    };
-    centerSelectedTab();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(centerSelectedTab);
-    observer.observe(list);
-    list.querySelectorAll<HTMLElement>('[role="tab"]').forEach((tab) => observer.observe(tab));
-    return () => observer.disconnect();
-  }, [value.tab, updateMoreTabs]);
   /**
    * O campo escuta o valor de FORA — e só ele.
    *
@@ -240,25 +189,21 @@ export function InboxFilters({ value, onChange }: Props) {
   const tabs = activeOrg
     ? visibleInboxTabs(activeOrg.role, activeOrg.visibility_mode)
     : INBOX_TABS.map((t) => t.value);
-  const moveTab = (direction: -1 | 1) => {
-    const next = tabs[tabs.indexOf(value.tab) + direction];
-    if (next) onChange(comAba(value, next));
-  };
   const countFor: Partial<Record<InboxTab, number>> = {
-    // `fila` é o nome novo; `unassigned` é o alias que a rota versionada mantém.
-    // O `??` cobre a janela em que a página ainda lê um cache de react-query
-    // gravado antes do deploy — sem ele o badge sumiria por alguns segundos.
-    unassigned: counts?.fila ?? counts?.unassigned,
-    // A aba do automático ganhou contador junto com o significado: ela deixou de
-    // filtrar `ai_handling` (2 conversas) e passou a mostrar o que o robô conduz
-    // (47, na instalação onde isto foi medido). Um número que existe na API e não
-    // aparece na tela é trabalho feito que ninguém vê.
-    ai: counts?.automatico,
-    mine: counts?.mine,
     all: counts?.all,
+    fazer_orcamento: counts?.fazer_orcamento,
+    mine: counts?.mine,
+    ai: counts?.automatico,
     closed: counts?.closed,
     archived: counts?.archived,
   };
+  const pillTabs = useMemo(() => {
+    const base = PRIMARY_TABS.filter((t) => tabs.includes(t));
+    if ((value.tab === "closed" || value.tab === "archived") && tabs.includes(value.tab)) {
+      base.push(value.tab);
+    }
+    return base;
+  }, [tabs, value.tab]);
   // Filtrar por um número que saiu da lista (o operador acabou de excluir o
   // canal) deixa o inbox mostrando um subconjunto — às vezes vazio — sem nada na
   // tela dizendo que há filtro. O número some do dropdown junto com o canal, e o
@@ -402,92 +347,87 @@ export function InboxFilters({ value, onChange }: Props) {
 
   return (
     <div className="border-b border-border bg-background">
-      {/* As setas aparecem só quando há abas fora da área visível; a faixa e o
-          sublinhado continuam com a altura compacta do Inbox. */}
-      <Tabs
-        value={value.tab}
-        onValueChange={(v) => onChange(comAba(value, v as InboxTab))}
-        className="px-3 pt-1"
-      >
-        <div className="flex items-center gap-1">
-          {moreTabs.left ? (
+      {/* Barra de pesquisa em pílula no topo (estilo WhatsApp Web) */}
+      <div className="px-3 pt-0.5 pb-2">
+        <div className="relative w-full">
+          <MagnifyingGlass
+            size={15}
+            weight="regular"
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-text-subtle"
+            aria-hidden
+          />
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t("Pesquisar ou começar uma nova conversa")}
+            className="h-9 w-full rounded-full border border-transparent bg-muted/75 pl-9 pr-8 text-xs shadow-none placeholder:text-text-subtle transition-[background-color,border-color] duration-fast ease-out focus-visible:border-accent/50 focus-visible:bg-surface-elevated"
+            aria-label={t("Buscar conversas")}
+          />
+          {searchInput && (
             <button
               type="button"
-              onClick={() => moveTab(-1)}
-              aria-label={t("Aba anterior")}
-              className="flex w-4 shrink-0 items-center justify-center text-text-muted hover:text-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => setSearchInput("")}
+              aria-label={t("Limpar busca")}
+              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-text-muted transition-[background-color,color] duration-fast ease-out hover:bg-muted hover:text-text"
             >
-              <CaretLeft size={13} aria-hidden />
+              <X size={12} aria-hidden />
             </button>
-          ) : (
-            <span className="w-4 shrink-0" aria-hidden />
           )}
-          <TabsList
-            ref={tabsListRef}
-            onScroll={updateMoreTabs}
-            className="h-auto min-w-0 flex-1 flex-wrap justify-between gap-x-1 gap-y-2 rounded-none bg-transparent p-0 [scrollbar-width:none]"
-          >
-            {tabs.map((tab) => {
+        </div>
+      </div>
+
+      {/* Faixa de pílulas de filtro: Todas, Fazer orçamento, Minhas, Automático, Não lidos, Tag e excesso */}
+      <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2.5">
+        <Tabs
+          value={value.tab}
+          onValueChange={(v) => onChange(comAba(value, v as InboxTab))}
+          className="contents"
+        >
+          <TabsList className="h-auto min-w-0 flex-wrap justify-start gap-x-1 gap-y-1.5 rounded-none bg-transparent p-0">
+            {pillTabs.map((tab) => {
               const meta = INBOX_TABS.find((t) => t.value === tab)!;
               const count = countFor[tab];
               return (
                 <TabsTrigger
                   key={tab}
                   value={tab}
-                  className="shrink-0 gap-1 rounded-none border-b-2 border-transparent px-0 pb-2 pt-1 text-xs font-medium text-text-muted data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:text-text data-[state=active]:shadow-none"
+                  className="h-7 shrink-0 gap-1 rounded-full border border-border/70 bg-muted/55 px-2.5 text-xs font-medium text-text-muted shadow-none transition-[background-color,border-color,color,scale] duration-fast ease-out active:scale-[0.97] hover:bg-muted hover:text-text data-[state=active]:border-accent data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
                 >
-                  {t(meta.label)}
+                  <span>{t(meta.label)}</span>
                   {depoisDeMontar && typeof count === "number" && count > 0 && (
-                    <span className="text-[11px] tabular-nums text-text-subtle">{count}</span>
+                    <span className="text-[11px] tabular-nums opacity-85">{count}</span>
                   )}
                 </TabsTrigger>
               );
             })}
           </TabsList>
-          {moreTabs.right ? (
-            <button
-              type="button"
-              onClick={() => moveTab(1)}
-              aria-label={t("Próxima aba")}
-              className="flex w-4 shrink-0 items-center justify-center text-text-muted hover:text-text focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <CaretRight size={13} aria-hidden />
-            </button>
-          ) : (
-            <span className="w-4 shrink-0" aria-hidden />
-          )}
-        </div>
-      </Tabs>
+        </Tabs>
 
-      <div className="flex items-center gap-1.5 overflow-x-auto px-3 pt-1.5 pb-1 no-scrollbar">
         <button
           type="button"
           aria-pressed={value.onlyUnread}
           onClick={() => onChange({ ...value, onlyUnread: !value.onlyUnread })}
           className={cn(
-            "h-7 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors",
+            "h-7 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-[background-color,border-color,color,scale] duration-fast ease-out active:scale-[0.97]",
             "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             value.onlyUnread
               ? "border-accent bg-accent text-accent-foreground"
-              : "border-border bg-transparent text-text-muted hover:bg-surface-elevated",
+              : "border-border/70 bg-muted/55 text-text-muted hover:bg-muted hover:text-text",
           )}
         >
           {t("Não lidos")}
         </button>
-        <button
-          type="button"
-          aria-pressed={value.onlyGroups ?? false}
-          onClick={() => onChange({ ...value, onlyGroups: !value.onlyGroups })}
-          className={cn(
-            "h-7 shrink-0 rounded-full border px-2.5 text-xs font-medium transition-colors",
-            "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-            value.onlyGroups
-              ? "border-accent bg-accent text-accent-foreground"
-              : "border-border bg-transparent text-text-muted hover:bg-surface-elevated",
-          )}
-        >
-          {t("Grupos")}
-        </button>
+
+        {value.onlyGroups && (
+          <button
+            type="button"
+            aria-pressed={true}
+            onClick={() => onChange({ ...value, onlyGroups: false })}
+            className="h-7 shrink-0 rounded-full border border-accent bg-accent px-2.5 text-xs font-medium text-accent-foreground transition-[background-color,scale] duration-fast ease-out active:scale-[0.97]"
+          >
+            {t("Grupos")} ×
+          </button>
+        )}
 
         {mostrarSeletorDeTag && (
           <DropdownMenu onOpenChange={(aberto) => {
@@ -612,25 +552,52 @@ export function InboxFilters({ value, onChange }: Props) {
             </Select>
           </div>
         )}
-      </div>
 
-      {/* Barra de pesquisa sutil colocada em baixo das conversas */}
-      <div className="px-3 pb-2 pt-1">
-        <div className="relative w-full">
-          <MagnifyingGlass
-            size={13}
-            weight="regular"
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-subtle"
-            aria-hidden
-          />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t("Buscar por nome, telefone ou mensagem…")}
-            className="h-8 w-full rounded-md border border-border/70 bg-surface-elevated/40 pl-8 pr-2.5 text-xs shadow-none placeholder:text-text-subtle focus-visible:border-border focus-visible:bg-background"
-            aria-label={t("Buscar conversas")}
-          />
-        </div>
+        {/* Menu de excesso (Fechadas, Arquivadas e Grupos) no mesmo formato do WhatsApp Web */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("Mais filtros")}
+              data-testid="inbox-mais-filtros"
+              className={cn(
+                "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/70 bg-muted/55 text-text-muted shadow-none transition-[background-color,border-color,color,scale] duration-fast ease-out active:scale-[0.97] hover:bg-muted hover:text-text",
+                "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                (value.tab === "closed" || value.tab === "archived" || value.onlyGroups) &&
+                  "border-accent/50 bg-accent-soft text-accent",
+              )}
+            >
+              <CaretDown size={13} aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={() => onChange(comAba(value, "closed"))}
+              className="justify-between"
+            >
+              <span>{t("Fechadas")}</span>
+              {depoisDeMontar && typeof countFor.closed === "number" && (
+                <span className="text-xs tabular-nums text-text-muted">{countFor.closed}</span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onChange(comAba(value, "archived"))}
+              className="justify-between"
+            >
+              <span>{t("Arquivadas")}</span>
+              {depoisDeMontar && typeof countFor.archived === "number" && (
+                <span className="text-xs tabular-nums text-text-muted">{countFor.archived}</span>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={value.onlyGroups ?? false}
+              onCheckedChange={() => onChange({ ...value, onlyGroups: !value.onlyGroups })}
+            >
+              {t("Grupos")}
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

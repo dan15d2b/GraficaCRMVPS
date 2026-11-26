@@ -19,6 +19,7 @@ import { CONVERSATION_TERMINAL_STATUSES } from "@/lib/schemas";
 import { orgTemAutomatico } from "@/lib/ai/agents/org-tem-automatico";
 import { comandosDaFila } from "@/lib/inbox/comando-da-conversa";
 import { aplicarMarcadores, modoDeEtiqueta } from "@/lib/inbox/marcador-da-conversa";
+import { aplicarFiltroDeOrcamento, resolverCriteriosOrcamento } from "@/lib/inbox/filtro-orcamento";
 import { createClient } from "@/lib/supabase/server";
 import { idsDeContatosPessoais } from "../_handler";
 
@@ -169,7 +170,9 @@ export async function GET(req: NextRequest): Promise<Response> {
     idsParticipadas = [];
   }
 
-  const [fila, automatico, mine, all, closed, archived] = await Promise.all([
+  const criteriosOrcamento = await resolverCriteriosOrcamento(supabase, org);
+
+  const [fila, automatico, mine, all, closed, archived, fazerOrcamento] = await Promise.all([
     // A FILA DEIXOU DE SER "sem dono + status de espera".
     //
     // Aquele par contava como trabalho humano pendente tudo que o robô estava
@@ -217,10 +220,17 @@ export async function GET(req: NextRequest): Promise<Response> {
     // para que arquivar seja reversível e auditável sem se confundir com o
     // encerramento do atendimento.
     countExact().eq("status", "archived"),
+    aplicarFiltroDeOrcamento(countExact(), criteriosOrcamento),
   ]);
 
   const firstErr =
-    fila.error ?? automatico.error ?? mine.error ?? all.error ?? closed.error ?? archived.error;
+    fila.error ??
+    automatico.error ??
+    mine.error ??
+    all.error ??
+    closed.error ??
+    archived.error ??
+    fazerOrcamento.error;
   if (firstErr) {
     return fail("internal_error", firstErr.message, 500, { requestId });
   }
@@ -238,6 +248,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       all: all.count ?? 0,
       closed: closed.count ?? 0,
       archived: archived.count ?? 0,
+      fazer_orcamento: fazerOrcamento.count ?? 0,
     },
     { requestId },
   );

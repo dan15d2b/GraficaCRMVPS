@@ -105,6 +105,8 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
       void qc.invalidateQueries({ queryKey: ["board"] });
       void qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
       void qc.invalidateQueries({ queryKey: ["crm-side-panel"] });
+      void qc.invalidateQueries({ queryKey: ["conversations"] });
+      void qc.invalidateQueries({ queryKey: ["conversation-counts"] });
     },
     onError: (err: any) => {
       console.error("[ConversaAcoesDoFunil] Falha ao mover lead:", err);
@@ -398,6 +400,8 @@ function ConversaAcoesDoFunilInner({ contactId, conversationId }: Props) {
               void qc.invalidateQueries({ queryKey: ["crm-summary", contactId] });
               void qc.invalidateQueries({ queryKey: ["board"] });
               void qc.invalidateQueries({ queryKey: ["conversation", conversationId] });
+              void qc.invalidateQueries({ queryKey: ["conversations"] });
+              void qc.invalidateQueries({ queryKey: ["conversation-counts"] });
             }}
           />
         </>

@@ -62,11 +62,11 @@ vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
 // com elas que o corte foi medido na issue.
 vi.mock("@/hooks/inbox/useConversationCounts", () => ({
   useConversationCounts: () => ({
-    data: { fila: 47, automatico: 12, mine: 8, all: 130, closed: 25, archived: 9 },
+    data: { fazer_orcamento: 47, automatico: 12, mine: 8, all: 130, closed: 25, archived: 9 },
   }),
 }));
 
-const VALUE: InboxFiltersValue = { tab: "ai", search: "", onlyUnread: false };
+const VALUE: InboxFiltersValue = { tab: "all", search: "", onlyUnread: false };
 
 /**
  * As larguras da coluna da lista: `LIMITES_LISTA` (240–520) e o padrão da
@@ -195,7 +195,7 @@ describe("sonda — as 6 abas da Inbox medidas em browser", () => {
       expect(linhas).toHaveLength(COLUNAS.length);
       for (const r of linhas) {
         const abas = r.abas as Array<{ rotulo: string; dentro: boolean }>;
-        expect(abas, "nenhuma aba foi medida").toHaveLength(6);
+        expect(abas, "nenhuma aba foi medida").toHaveLength(4);
         expect(
           r.rolavel,
           `a faixa rolava ${r.rolavel}px em coluna de ${r.coluna}px — aba escondida atrás da seta`,

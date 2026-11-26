@@ -215,7 +215,7 @@ function CampoDeEtiquetas({
                 type="button"
                 onClick={() => adicionarTag("*")}
                 disabled={disabled}
-                className="inline-flex items-center gap-1 rounded-md border border-rose-400 bg-rose-100/80 dark:border-rose-700 dark:bg-rose-950/80 px-2 py-0.5 text-xs font-bold text-rose-900 dark:text-rose-200 hover:border-rose-500 hover:bg-rose-200 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-md border border-rose-400 bg-rose-100/80 dark:border-rose-700 dark:bg-rose-950/80 px-2 py-0.5 text-xs font-bold text-rose-900 dark:text-rose-200 hover:border-rose-500 hover:bg-rose-200 transition-[background-color,border-color,color] duration-fast ease-out active:scale-[0.97] cursor-pointer"
                 title={t("Bloquear qualquer conversa que possua qualquer etiqueta do WhatsApp")}
               >
                 <span>🛡️ + {t("Todas as etiquetas (*)")}</span>
@@ -227,7 +227,7 @@ function CampoDeEtiquetas({
                 type="button"
                 onClick={() => adicionarTag(sugestao)}
                 disabled={disabled}
-                className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80 hover:border-primary/50 hover:bg-primary/10 hover:text-foreground transition-all cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-md border border-border/80 bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80 hover:border-primary/50 hover:bg-primary/10 hover:text-foreground transition-[background-color,border-color,color] duration-fast ease-out active:scale-[0.97] cursor-pointer"
               >
                 <span>+ {sugestao}</span>
               </button>

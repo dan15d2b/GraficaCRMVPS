@@ -613,7 +613,7 @@ export function FormularioDaMarcaDaOrganizacao({ gravada, contaResend, instalaca
                 type="button"
                 onClick={() => setSidebarColor(preset.hex)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer",
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border transition-[background-color,border-color,color,scale] duration-fast ease-out active:scale-[0.97] cursor-pointer",
                   sidebarColor.toLowerCase() === preset.hex.toLowerCase()
                     ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
                     : "border-border bg-surface hover:bg-surface-elevated text-text"

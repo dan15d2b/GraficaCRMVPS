@@ -2089,6 +2089,11 @@ export const DICIONARIO: Traducoes = {
   Fila: { es: "Cola" },
   Minhas: { es: "Mías" },
   Todas: { es: "Todas" },
+  "Fazer orçamento": { es: "Presupuestar" },
+  "Pesquisar ou começar uma nova conversa": { es: "Buscar o iniciar una nueva conversación" },
+  "Limpar busca": { es: "Limpiar búsqueda" },
+  "Mais filtros": { es: "Más filtros" },
+  "Ir para o fim": { es: "Ir al final" },
   Fechadas: { es: "Cerradas" },
   // O estado `archived` é terminal como `closed`, mas conta outra coisa: é a
   // pasta do histórico. Sem entrada própria, a aba "Arquivadas" apareceria

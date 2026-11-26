@@ -70,6 +70,8 @@ interface Props {
   botaoBuscaRef?: RefObject<HTMLButtonElement | null>;
   /** Seleciona outra conversa no Inbox — a aba Número do Transferir abre a do outro número. */
   onAbrirConversa?: (id: string) => void;
+  /** Reserva espaço à direita quando o painel lateral CRM está recolhido, evitando colisão com a barra flutuante. */
+  reservarDireitaFlutuante?: boolean;
 }
 
 /**
@@ -104,6 +106,7 @@ export function ConversationHeader({
   onBuscar,
   buscaAberta,
   botaoBuscaRef,
+  reservarDireitaFlutuante = false,
 }: Props) {
   const t = useT();
   const { user, activeOrg } = useAuth();
@@ -299,7 +302,12 @@ export function ConversationHeader({
   </header>;
   return (
     <>
-    <div className="flex flex-col gap-1 border-b border-border bg-background px-3 py-1.5 md:px-4 md:py-2">
+    <div
+      className={cn(
+        "flex flex-col gap-1 border-b border-border bg-background px-3 py-1.5 max-md:pt-12 md:px-4 md:py-2",
+        reservarDireitaFlutuante ? "md:pr-[292px]" : "md:pr-[292px] xl:pr-4",
+      )}
+    >
       {/* LINHA 1: Identidade do Contato à esquerda + Barra de Ações à direita (Área verde) */}
       <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
         {/* Identidade */}

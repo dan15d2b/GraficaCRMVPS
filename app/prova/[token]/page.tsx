@@ -417,7 +417,7 @@ export default function ProvaPublicaPage({ params }: PageProps) {
                   type="button"
                   disabled={!checklistCompleto || submitting}
                   onClick={() => void handleAprovar()}
-                  className={`flex-1 w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 px-5 text-sm font-bold shadow-sm transition-all cursor-pointer ${
+                  className={`flex-1 w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 px-5 text-sm font-bold shadow-sm transition-[background-color,border-color,color,box-shadow,scale] duration-fast ease-out active:scale-[0.97] cursor-pointer ${
                     checklistCompleto
                       ? "bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.99] shadow-emerald-600/20"
                       : "bg-slate-200 text-slate-400 cursor-not-allowed"

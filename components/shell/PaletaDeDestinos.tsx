@@ -104,7 +104,7 @@ export function PaletaDeDestinos({
         notebook, passava do rodapé. Centralizada, a sobra se reparte nas duas
         pontas e o teto do `DialogContent` resolve o resto com rolagem.
       */}
-      <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="ds-sem-animacao max-w-2xl gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogTitle className="sr-only">{titulo}</DialogTitle>
         {/* O miolo é um componente à parte porque o Radix o DESMONTA ao fechar:
             busca e destaque nascem zerados na próxima abertura por construção,
@@ -328,7 +328,7 @@ function Resultados({
                         onMouseEnter={() => setDestacado(idxGlobal)}
                         onClick={() => navegar(d)}
                         className={cn(
-                          "group flex cursor-pointer items-start gap-3 rounded-lg border border-border/50 p-2.5 transition-all",
+                          "group flex cursor-pointer items-start gap-3 rounded-lg border border-border/50 p-2.5 transition-[background-color,border-color,box-shadow] duration-fast ease-out",
                           ativo
                             ? "border-primary/40 bg-accent text-accent-foreground shadow-xs ring-1 ring-primary/20"
                             : "hover:border-border hover:bg-muted/50",

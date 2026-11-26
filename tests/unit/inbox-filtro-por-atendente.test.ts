@@ -47,7 +47,7 @@ describe("filtro por atendente — a aba Minhas continua sendo só as minhas", (
   });
 
   it("as demais abas não impõem atendente: a escolha do gerente é que vale", () => {
-    for (const aba of ["all", "closed", "archived", "unassigned", "ai"] as const) {
+    for (const aba of ["all", "fazer_orcamento", "closed", "archived", "ai"] as const) {
       expect(tabToFilter(aba).assigned_to).toBeUndefined();
     }
   });

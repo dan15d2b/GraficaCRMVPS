@@ -46,14 +46,14 @@ vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
   useContactTagVocabulary: () => ({ data: [] }),
 }));
 // Uma contagem POR ABA, para o caso de contadores poder acusar uma troca de
-// chave: `automatico` é a da "Automático", `fila` é a da "Fila".
+// chave: `automatico` é a da "Automático", `fazer_orcamento` é a da "Fazer orçamento".
 vi.mock("@/hooks/inbox/useConversationCounts", () => ({
   useConversationCounts: () => ({
-    data: { fila: 3, mine: 2, all: 5, automatico: 7, closed: 4, archived: 1 },
+    data: { fazer_orcamento: 3, mine: 2, all: 5, automatico: 7, closed: 4, archived: 1 },
   }),
 }));
 
-const VALUE: InboxFiltersValue = { tab: "ai", search: "", onlyUnread: false };
+const VALUE: InboxFiltersValue = { tab: "all", search: "", onlyUnread: false };
 
 /** O rótulo de cada aba, sem o contador que vem colado no `textContent`. */
 function abasRenderizadas(): string[] {
@@ -67,88 +67,76 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("as seis abas, na ordem pedida pela #2498", () => {
-  it("Automático, Fila, Minhas, Todas, Fechadas, Arquivadas — nessa ordem", () => {
+describe("distribuição de filtros no estilo WhatsApp Web", () => {
+  it("Todas, Fazer orçamento, Minhas, Automático — nessa ordem como pílulas principais", () => {
     render(<InboxFilters value={VALUE} onChange={() => {}} />);
     expect(abasRenderizadas()).toEqual([
-      "Automático",
-      "Fila",
-      "Minhas",
       "Todas",
-      "Fechadas",
-      "Arquivadas",
+      "Fazer orçamento",
+      "Minhas",
+      "Automático",
     ]);
   });
 
-  it("os VALUES e os rótulos são os MESMOS de antes, só reordenados", () => {
-    // Pares lidos da FONTE, e não da tela: `value` é o que a rota recebe
-    // (`?filter=ai`) e nenhum deles é exposto como atributo no `TabsTrigger`.
-    // Um par trocado de rótulo nasceria um filtro que a rota não lê, e um par
-    // a mais nasceria uma aba que ninguém tem contador — por isso os 6, um por
-    // um, na ordem nova.
+  it("os VALUES e os rótulos do mapa INBOX_TABS incluem as 6 visões sem Fila", () => {
     const fonte = readFileSync("components/inbox/InboxFilters.tsx", "utf8");
     const pares = [...fonte.matchAll(/\{\s*value:\s*"(\w+)",\s*label:\s*"([^"]+)"\s*\}/g)].map(
       ([, value, label]) => `${value}=${label}`,
     );
     expect(pares).toEqual([
-      "ai=Automático",
-      "unassigned=Fila",
-      "mine=Minhas",
       "all=Todas",
+      "fazer_orcamento=Fazer orçamento",
+      "mine=Minhas",
+      "ai=Automático",
       "closed=Fechadas",
       "archived=Arquivadas",
     ]);
   });
 
-  it("cada aba continua com o SEU contador (nada trocou de chave)", () => {
+  it("cada pílula principal exibe o SEU contador", () => {
     render(<InboxFilters value={VALUE} onChange={() => {}} />);
-    expect(screen.getByRole("tab", { name: /^Automático/ })).toHaveTextContent("7");
-    expect(screen.getByRole("tab", { name: /^Fila/ })).toHaveTextContent("3");
-    expect(screen.getByRole("tab", { name: /^Minhas/ })).toHaveTextContent("2");
     expect(screen.getByRole("tab", { name: /^Todas/ })).toHaveTextContent("5");
-    expect(screen.getByRole("tab", { name: /^Fechadas/ })).toHaveTextContent("4");
-    expect(screen.getByRole("tab", { name: /^Arquivadas/ })).toHaveTextContent("1");
+    expect(screen.getByRole("tab", { name: /^Fazer orçamento/ })).toHaveTextContent("3");
+    expect(screen.getByRole("tab", { name: /^Minhas/ })).toHaveTextContent("2");
+    expect(screen.getByRole("tab", { name: /^Automático/ })).toHaveTextContent("7");
   });
 });
 
-describe("só a ordem muda — as permissões continuam quem eram", () => {
-  it("manager vê as seis, com 'Todas' no meio", () => {
+describe("permissões de visibleInboxTabs sem Fila", () => {
+  it("manager vê todas as seis visões sem Fila", () => {
     expect(visibleInboxTabs("manager", "all")).toEqual([
-      "ai",
-      "unassigned",
-      "mine",
       "all",
+      "fazer_orcamento",
+      "mine",
+      "ai",
       "closed",
       "archived",
     ]);
   });
 
-  it("agent em modo own* segue SEM 'Todas' — e com as outras cinco na ordem nova", () => {
-    // A regra de visão é filtrar, não reordenar: quem perde 'all' perde só ela,
-    // e a ordem que sobra é a mesma que todo mundo vê.
+  it("agent em modo own também tem Todas como janela principal", () => {
     expect(visibleInboxTabs("agent", "own")).toEqual([
-      "ai",
-      "unassigned",
-      "mine",
-      "closed",
-      "archived",
-    ]);
-  });
-
-  it("agent com visibility 'all' tem as seis, 'Todas' na posição dela", () => {
-    expect(visibleInboxTabs("agent", "all")).toEqual([
-      "ai",
-      "unassigned",
-      "mine",
       "all",
+      "fazer_orcamento",
+      "mine",
+      "ai",
       "closed",
       "archived",
     ]);
   });
 
-  it("a aba ativa continua podendo ser QUALQUER uma das seis", () => {
-    // A faixa é navegável por seta (`moveTab` anda pelo array): uma ordem nova
-    // que embaralhasse os índices devolveria o operador à vizinha errada.
+  it("agent com visibility 'all' tem as seis na mesma ordem", () => {
+    expect(visibleInboxTabs("agent", "all")).toEqual([
+      "all",
+      "fazer_orcamento",
+      "mine",
+      "ai",
+      "closed",
+      "archived",
+    ]);
+  });
+
+  it("quando Fechadas está ativa via menu de excesso, ela aparece marcada nas pílulas", () => {
     render(<InboxFilters value={{ ...VALUE, tab: "closed" }} onChange={() => {}} />);
     const ativa = screen.getByRole("tab", { selected: true });
     expect(ativa.textContent ?? "").toMatch(/^Fechadas/);

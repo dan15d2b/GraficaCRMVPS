@@ -384,7 +384,7 @@ export function SidebarContent({
                           aria-current={isActive ? "page" : undefined}
                           onClick={onNavigate}
                           className={cn(
-                            "relative flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
+                            "relative flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-[background-color,color,transform] duration-fast ease-out",
                             isActive
                               ? isLightBgDark
                                 ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
@@ -420,7 +420,7 @@ export function SidebarContent({
                         aria-current={pathname === group.hub.href ? "page" : undefined}
                         onClick={onNavigate}
                         className={cn(
-                          "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
+                          "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-[background-color,color,transform] duration-fast ease-out",
                           pathname === group.hub.href
                             ? isLightBgDark
                               ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
@@ -454,7 +454,7 @@ export function SidebarContent({
             aria-current={pathname.startsWith(rodape.href) ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
+              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-[background-color,color,transform] duration-fast ease-out",
               pathname.startsWith(rodape.href)
                 ? isLightBgDark
                   ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"
@@ -481,7 +481,7 @@ export function SidebarContent({
             aria-current={pathname.startsWith(ajuda.href) ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-all",
+              "mb-0.5 flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-medium transition-[background-color,color,transform] duration-fast ease-out",
               pathname.startsWith(ajuda.href)
                 ? isLightBgDark
                   ? "bg-white text-indigo-900 shadow-sm font-bold dark:bg-accent dark:text-accent-foreground"

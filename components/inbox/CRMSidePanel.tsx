@@ -1024,7 +1024,7 @@ export function CRMSidePanel({
   if (recolhido && onAlternarRecolhido) {
     return (
       <aside
-        className="flex h-full flex-col items-center border-l border-border bg-background py-2"
+        className="flex h-full flex-col items-center border-l border-border bg-background pt-14 pb-2"
         data-testid="inbox-painel-recolhido"
       >
         <BotaoDeRecolherDoPainel recolhido onAlternar={onAlternarRecolhido} />
@@ -1036,7 +1036,7 @@ export function CRMSidePanel({
     return (
       <aside className="relative flex h-full items-center justify-center border-l border-border p-4 text-center text-xs text-muted-foreground">
         {onAlternarRecolhido && (
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-14 right-2">
             <BotaoDeRecolherDoPainel recolhido={false} onAlternar={onAlternarRecolhido} />
           </div>
         )}
@@ -1459,7 +1459,10 @@ export function CRMSidePanel({
           celular chega à personalização. Sem o controle de recolher, o espaço
           dele fica com um vazio — o botão de módulos não muda de lugar. */}
       <div
-        className="sticky top-0 z-10 -mx-4 -mt-4 flex shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-4 py-1"
+        className={cn(
+          "sticky top-0 z-10 -mx-4 -mt-4 flex shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-4",
+          onAlternarRecolhido ? "pt-13 pb-1.5" : "py-1",
+        )}
         data-testid="inbox-cabecalho-do-painel"
       >
         <DialogoDosModulos modulos={modulos} onSalvos={setModulos} />

@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { setActiveOrg } from "@/app/actions/shell/setActiveOrg";
 
-export function TenantSwitcher() {
+export function TenantSwitcher({ compact = false }: { compact?: boolean }) {
   const t = useT();
   const user = useUser();
   const active = useActiveOrg();
@@ -66,13 +66,19 @@ export function TenantSwitcher() {
           variant="ghost"
           size="sm"
           disabled={isPending || !!user.support}
-          className="gap-2"
+          className={compact ? "h-8 gap-1.5 rounded-full px-2.5 text-xs font-medium" : "gap-2"}
           aria-label={`${t("Organização")}: ${active?.name ?? t("Selecionar org")}`}
           title={user.support ? "Saia do acompanhamento para trocar de organização" : undefined}
           data-testid="tenant-switcher"
         >
-          <Storefront size={16} weight="duotone" aria-hidden />
-          <span className="hidden max-w-[160px] truncate md:inline">
+          <Storefront size={compact ? 15 : 16} weight="duotone" aria-hidden />
+          <span
+            className={
+              compact
+                ? "hidden max-w-[92px] truncate md:inline"
+                : "hidden max-w-[160px] truncate md:inline"
+            }
+          >
             {active?.name ?? "Selecionar org"}
           </span>
           <CaretDown size={12} aria-hidden className="hidden md:inline" />

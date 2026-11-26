@@ -51,13 +51,13 @@ vi.mock("@/hooks/contacts/useContactTagVocabulary", () => ({
   }),
 }));
 vi.mock("@/hooks/inbox/useConversationCounts", () => ({
-  useConversationCounts: () => ({ data: { unassigned: 1 } }),
+  useConversationCounts: () => ({ data: { all: 1 } }),
 }));
 
 const GATILHO = "Filtrar por tag";
 /** O gatilho deixou de ser um `Select` (#1274): é botão com `aria-label`. */
 const gatilho = () => screen.queryByLabelText(GATILHO);
-const base: InboxFiltersValue = { tab: "unassigned", search: "", onlyUnread: false };
+const base: InboxFiltersValue = { tab: "all", search: "", onlyUnread: false };
 
 beforeEach(() => {
   // Radix em jsdom: captura de ponteiro e rolagem até o item não existem aqui.

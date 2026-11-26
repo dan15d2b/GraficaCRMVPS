@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -155,10 +155,6 @@ function comando(url: string) {
   return new URLSearchParams(url.split("?")[1] ?? "").get("comando");
 }
 
-function esqueletos(): number {
-  return document.querySelectorAll("[data-esqueleto]").length;
-}
-
 async function entregar(url: string, resposta: unknown) {
   await act(async () => {
     busca(url).resolver(resposta);
@@ -187,51 +183,36 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
-describe("a lista do inbox consulta UMA vez quando o filtro efetivo muda (#2365)", () => {
-  it("⭐ org SEM automático: a Fila espera o fato da org e busca uma vez só", async () => {
-    montar();
-
-    // A pergunta org-wide sai primeiro — e é ELA que decide o filtro da Fila.
-    await waitFor(() => expect(chamadas.some((c) => c.url === AUTOMATICO)).toBe(true));
-    // ANTES do conserto, aqui já havia UM GET da lista (chave `aguardando`) — o
-    // que a resposta do automático descartava. É este o dado jogado no lixo.
-    expect(listas(), "a Fila consultou antes de saber se a org tem automático").toHaveLength(0);
-    // E a espera não mente sobre o estado: esqueleto, nunca "caixa vazia".
-    expect(esqueletos()).toBeGreaterThan(0);
-    expect(screen.queryByText(/Sem conversas por aqui/)).not.toBeInTheDocument();
-
-    await entregar(AUTOMATICO, { data: { ativo: false } });
-
-    // UMA requisição, com o filtro DEFINITIVO da Fila de uma org sem automático.
-    await waitFor(() => expect(listas()).toHaveLength(1));
-    expect(comando(unicaLista().url)).toBe("aguardando,automatico");
-
-    // E nenhuma segunda chave depois: nada de GET em série.
-    await assentar();
-    expect(listas(), "segundo GET em série depois da resposta do automático").toHaveLength(1);
-  });
-
-  it("aba que NÃO depende do fato (Todas) segue consultando na hora — o gate é da Fila", async () => {
-    window.history.replaceState(null, "", "/app/inbox?filter=all");
+describe("a lista do inbox consulta UMA vez quando abre (sem depender de Fila)", () => {
+  it("janela padrão (Todas) consulta na hora — 1 GET mesmo com automatico-ativo demorando", async () => {
     montar();
 
     await waitFor(() => expect(listas()).toHaveLength(1));
     expect(comando(unicaLista().url)).toBeNull();
 
-    // O fato org-wide foi pedido — o cabeçalho e a lista o leem para o rótulo —
-    // mas não segura a lista de uma aba que não o usa.
+    await entregar(AUTOMATICO, { data: { ativo: false } });
+    await assentar();
+    expect(listas(), "segundo GET em série depois da resposta do automático").toHaveLength(1);
+  });
+
+  it("aba Fazer orçamento também dispara somente 1 GET com stage_filter=fazer_orcamento", async () => {
+    window.history.replaceState(null, "", "/app/inbox?filter=fazer_orcamento");
+    montar();
+
+    await waitFor(() => expect(listas()).toHaveLength(1));
+    const url = unicaLista().url;
+    expect(new URLSearchParams(url.split("?")[1] ?? "").get("stage_filter")).toBe("fazer_orcamento");
+
     await assentar();
     expect(listas()).toHaveLength(1);
   });
 
-  it("org COM automático: a Fila continua pedindo só `aguardando` — uma busca, filtro igual", async () => {
+  it("com ?filter=ai pede comando=automatico em uma única requisição", async () => {
+    window.history.replaceState(null, "", "/app/inbox?filter=ai");
     montar();
-    await waitFor(() => expect(chamadas.some((c) => c.url === AUTOMATICO)).toBe(true));
-
-    await entregar(AUTOMATICO, { data: { ativo: true } });
 
     await waitFor(() => expect(listas()).toHaveLength(1));
-    expect(comando(unicaLista().url)).toBe("aguardando");
+    expect(comando(unicaLista().url)).toBe("automatico");
 
     await assentar();
     expect(listas()).toHaveLength(1);
